@@ -52,7 +52,7 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 </div>
 
 <div id="authModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0">Welcome to Moche</h2><div class="muted" id="authSubtitle">Sign in or create your Moche account</div></div><button class="close" onclick="closeAuth()">×</button></div>
-<form class="form" onsubmit="login(event)"><div class="field"><label>Your name</label><input id="authName" required placeholder="e.g. Alex Johnson"></div><div class="field"><label>Email</label><input id="authEmail" type="email" required placeholder="you@example.com"></div><div class="field"><label>I want to</label><select id="authRole"><option value="customer">Post jobs / hire people</option><option value="worker">Find jobs / make money</option></select></div><button class="btn primary" type="submit">Enter Moche</button><div class="notice">Moche uses secure email sign-in. Your jobs, offers, and profile are stored in Supabase.</div></form></div></div>
+<form class="form" onsubmit="login(event)"><div class="field"><label>Your name</label><input id="authName" required placeholder="e.g. Alex Johnson"></div><div class="field"><label>Email</label><input id="authEmail" type="email" required placeholder="you@example.com"></div><div class="field"><label>I want to</label><select id="authRole"><option value="customer">Post jobs / hire people</option><option value="worker">Find jobs / make money</option></select></div><button class="btn primary" type="submit">Enter Moche</button><div class="notice">Moche uses secure email sign-in. Your session stays signed in on this device, so you won't need a new email every time you return.</div></form></div></div>
 <div id="jobModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0" id="jobModalTitle">Job</h2><div class="muted" id="jobModalMeta"></div></div><button class="close" onclick="closeJobModal()">×</button></div><div id="jobModalBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
 
@@ -60,7 +60,7 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 <script>
 const SUPABASE_URL='https://pwodchiqrkcyzzfooagr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_F1uWl8QdJIvIue7zP4zl1Q_2mvZVrC0';
-const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});
 
 let state={jobs:[],users:[],session:null};
 let pendingProfile=null;
@@ -70,15 +70,30 @@ function money(n){return '$'+Number(n||0).toFixed(0)}
 function cleanText(v){return String(v||'').trim()}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),2600)}
 function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');document.getElementById('siteHeader').classList.remove('hidden');window.scrollTo(0,0)}
-function openAuth(role){document.getElementById('authRole').value=role||'customer';document.getElementById('authSubtitle').textContent='Sign in or create your Moche account';document.getElementById('authModal').classList.remove('hidden')}
+async function openAuth(role){
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session?.user){
+    await loadData();
+    showApp();
+    switchView(current()?.role==='worker'?'browse':'dashboard');
+    toast('You are already signed in.');
+    return;
+  }
+  document.getElementById('authRole').value=role||'customer';
+  document.getElementById('authSubtitle').textContent='Sign in or create your Moche account';
+  document.getElementById('authModal').classList.remove('hidden')
+}
 function closeAuth(){document.getElementById('authModal').classList.add('hidden')}
 function current(){return state.users.find(u=>u.id===state.session)}
 function getUser(id){return state.users.find(x=>x.id===id)}
 function profileCard(user,label='Profile'){user=user||{};return `<div class="profile-card"><div class="profile-head"><div class="avatar big">${esc((user.name||'?').charAt(0))}</div><div><strong>${esc(user.name||'Moche member')}</strong><div class="rating">★ ${Number(user.rating||5).toFixed(1)} <span class="muted">· ${esc(label)}</span></div></div></div><p>${esc(user.bio||'No profile description yet.')}</p></div>`}
 
 async function ensureProfile(user,name,role){
+  const {data:existing,error:readError}=await supabaseClient.from('profiles').select('id').eq('id',user.id).maybeSingle();
+  if(readError)throw readError;
+  if(existing)return;
   const payload={id:user.id,name:name||user.user_metadata?.name||'Moche member',role:role||user.user_metadata?.role||'customer'};
-  const {error}=await supabaseClient.from('profiles').upsert(payload,{onConflict:'id'});
+  const {error}=await supabaseClient.from('profiles').insert(payload);
   if(error)throw error;
 }
 async function loadData(){
@@ -118,9 +133,18 @@ async function login(e){
   const role=document.getElementById('authRole').value;
   if(!name||!email)return;
   pendingProfile={name,role};
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session?.user){
+    closeAuth();
+    await loadData();
+    showApp();
+    switchView(current()?.role==='worker'?'browse':'dashboard');
+    toast('You are already signed in.');
+    return;
+  }
   const {error}=await supabaseClient.auth.signInWithOtp({
     email,
-    options:{data:{name,role},emailRedirectTo:window.location.href}
+    options:{data:{name,role},emailRedirectTo:window.location.href,shouldCreateUser:true}
   });
   if(error){toast(error.message);return}
   closeAuth();
@@ -266,6 +290,16 @@ async function initMoche(){
     }catch(err){console.error(err);toast(err.message||'Could not load Moche.');showLanding();}
   }else showLanding();
 }
+supabaseClient.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_IN' && session?.user){
+    setTimeout(async()=>{try{await finishAuth(session.user)}catch(err){console.error(err)}},0);
+  }
+  if(event==='SIGNED_OUT'){
+    state={jobs:[],users:[],session:null};
+    showLanding();
+  }
+});
+
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal()}});
 initMoche();
 </script>
