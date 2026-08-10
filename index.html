@@ -19,6 +19,8 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 .authtabs{display:flex;gap:6px;padding:4px;background:#f1f2f5;border-radius:12px;margin-bottom:18px}.authtab{flex:1;border:0;background:transparent;padding:10px;border-radius:9px;font-weight:800;font-size:14px;color:#667085}.authtab.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(17,24,39,.08)}
 .toast.error{background:var(--danger)}.toast.success{background:var(--green)}
 .badge.completed{background:#eef2f7;color:#465160}
+.badge.declined{background:#fdeceb;color:#c0392b}.badge.cancelled{background:#fdeceb;color:#c0392b}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
 .chat-messages{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px;margin-bottom:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfc}
 .chat-msg{display:flex;flex-direction:column;max-width:78%}
 .chat-msg.mine{align-self:flex-end;align-items:flex-end}
@@ -130,7 +132,7 @@ let state={jobs:[],users:[],session:null};
 let pendingProfile=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function money(n){return '$'+Number(n||0).toFixed(0)}
+function money(n){n=Number(n||0);return '$'+(Number.isInteger(n)?n:n.toFixed(2))}
 function cleanText(v){return String(v||'').trim()}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(type?' '+type:'');el.classList.remove('hidden');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.add('hidden'),2600)}
 function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');document.getElementById('siteHeader').classList.remove('hidden');window.scrollTo(0,0)}
@@ -418,7 +420,7 @@ function offerList(j){
   if(!j.offers.length)return '<div class="empty" style="margin-top:12px">No offers yet.</div>';
   return '<div style="margin-top:10px">'+j.offers.map(o=>{
     const worker=getUser(o.workerId)||{name:o.worker,rating:o.rating,bio:o.bio};
-    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||5).toFixed(1)} <span class="muted">· Worker</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong><button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
+    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||5).toFixed(1)} <span class="muted">· Worker</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong>${o.status!=='pending'?`<span class="badge ${esc(o.status)}">${esc(o.status)}</span>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn ghost small danger" onclick="declineOffer('${j.id}','${o.id}')">Decline</button><button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
   }).join('')+'</div>';
 }
 let browseFilter='';
@@ -469,9 +471,10 @@ function openJob(id){
   document.getElementById('jobModalTitle').textContent=j.title;document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
   let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> ${esc(j.status)}<br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
   if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer')}</div>`;
+  if(j.status==='open'&&j.customerId===u.id)body+=`<div style="margin-top:12px"><button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
   if(j.status==='open'&&j.customerId!==u.id){
     const mine=j.offers.find(o=>o.workerId===u.id);
-    body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
+    body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${mine.status==='pending'?`<button class="btn ghost small danger" onclick="withdrawOffer('${j.id}','${mine.id}')">Withdraw offer</button>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button></div>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
   }
   if((j.status==='hired'||j.status==='completed')&&hiredOffer){
     if(j.customerId===u.id){
@@ -638,13 +641,36 @@ async function makeOffer(e,id){
 }
 function hire(jobId,offerId){
   const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
-  showConfirm('Confirm hire',`<div class="notice" style="margin-bottom:14px">This marks the job as hired and notifies ${esc(o.worker)}.</div><div class="form"><div><strong>Worker</strong><br>${esc(o.worker)}</div><div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>Agreed price</strong><br>${money(o.price)}</div></div>`,async()=>{
+  showConfirm('Confirm hire',`<div class="notice" style="margin-bottom:14px">This marks the job as hired, notifies ${esc(o.worker)}, and declines any other pending offers on this job.</div><div class="form"><div><strong>Worker</strong><br>${esc(o.worker)}</div><div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>Agreed price</strong><br>${money(o.price)}</div></div>`,async()=>{
     const {error:oe}=await supabaseClient.from('offers').update({status:'accepted'}).eq('id',offerId).eq('job_id',jobId);
     if(oe){toast(oe.message,'error');return}
+    await supabaseClient.from('offers').update({status:'declined'}).eq('job_id',jobId).eq('status','pending').neq('id',offerId);
     const {error:je}=await supabaseClient.from('jobs').update({status:'hired'}).eq('id',jobId).eq('customer_id',current().id);
     if(je){toast(je.message,'error');return}
     await loadData();closeJobModal();toast(`${o.worker} is hired!`,'success');switchView('dashboard');
   },'Hire this worker');
+}
+function declineOffer(jobId,offerId){
+  const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
+  showConfirm('Decline this offer?',`<div class="notice">${esc(o.worker)} will be able to see their offer was declined.</div>`,async()=>{
+    const {error}=await supabaseClient.from('offers').update({status:'declined'}).eq('id',offerId).eq('job_id',jobId);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Offer declined','success');switchView('dashboard');
+  },'Decline offer');
+}
+function withdrawOffer(jobId,offerId){
+  showConfirm('Withdraw your offer?','<div class="notice">The customer will no longer see this as an active offer, and you can send a new one later.</div>',async()=>{
+    const {error}=await supabaseClient.from('offers').delete().eq('id',offerId).eq('worker_id',current().id);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Offer withdrawn','success');switchView('dashboard');
+  },'Withdraw offer');
+}
+function cancelJob(jobId){
+  showConfirm('Cancel this job?','<div class="notice">This removes the job from Browse jobs. Anyone who offered will see it was cancelled.</div>',async()=>{
+    const {error}=await supabaseClient.from('jobs').update({status:'cancelled'}).eq('id',jobId).eq('customer_id',current().id);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
+  },'Cancel job');
 }
 
 async function initMoche(){
@@ -668,6 +694,15 @@ supabaseClient.auth.onAuthStateChange((event,session)=>{
 });
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal()}});
+function handleAuthRedirectError(){
+  const raw=(window.location.hash||'').replace(/^#/,'')||(window.location.search||'').replace(/^\?/,'');
+  if(!raw||!raw.includes('error'))return;
+  const params=new URLSearchParams(raw);
+  const desc=params.get('error_description')||params.get('error')||'';
+  if(desc){toast(decodeURIComponent(desc.replace(/\+/g,' ')),'error')}
+  history.replaceState(null,'',window.location.pathname+window.location.search.replace(/[?&](error[^&]*|error_description[^&]*)/g,''));
+}
+handleAuthRedirectError();
 initMoche();
 </script>
 
