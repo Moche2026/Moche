@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -331,6 +332,37 @@ function modeToggleHtml(){
     <div class="muted" style="font-size:12px;margin:6px 0 14px">Just a view preference — every account can both post jobs and take jobs.</div>
   </div>`;
 }
+function profilePanelHtml(u){
+  return `<div class="panel">
+    <h2>Your profile</h2>
+    <div id="profileView">
+      ${profileCard(u,u.role==='worker'?'Worker':'Customer')}
+      <button class="btn ghost small" style="margin-top:10px" onclick="toggleEditProfile(true)">Edit profile</button>
+    </div>
+    <form class="form hidden" id="profileEditForm" onsubmit="saveProfile(event)" style="margin-top:10px">
+      <div class="field"><label>Your name</label><input id="editName" value="${esc(u.name||'')}" required></div>
+      <div class="field"><label>Skills & experience</label><textarea id="editBio" style="min-height:90px" placeholder="What can you help with? Tools, experience, availability...">${esc(u.bio||'')}</textarea></div>
+      <div style="display:flex;gap:8px"><button class="btn primary small" type="submit">Save</button><button class="btn ghost small" type="button" onclick="toggleEditProfile(false)">Cancel</button></div>
+    </form>
+    <div class="notice" style="margin-top:10px">Your account can both post jobs and work jobs. Keep your skills and experience description strong to build credibility.</div>
+  </div>`;
+}
+function toggleEditProfile(edit){
+  document.getElementById('profileView')?.classList.toggle('hidden',edit);
+  document.getElementById('profileEditForm')?.classList.toggle('hidden',!edit);
+}
+async function saveProfile(e){
+  e.preventDefault();
+  const name=cleanText(document.getElementById('editName').value);
+  const bio=cleanText(document.getElementById('editBio').value);
+  if(!name){toast('Please add your name.');return}
+  const btn=e.target.querySelector('button[type=submit]');
+  busy(btn,'Saving…');
+  const {error}=await supabaseClient.from('profiles').update({name,bio}).eq('id',current().id);
+  unbusy(btn);
+  if(error){toast(error.message,'error');return}
+  await loadData();toast('Profile updated!','success');switchView('dashboard');
+}
 function renderWorkerDashboard(){
   const u=current();
   if(!u)return;
@@ -360,6 +392,7 @@ function renderWorkerDashboard(){
         <p class="muted">Offers you've sent and their current status.</p>
         <div class="joblist">${myOffers.length?myOffers.map(jobCard).join(''):'<div class="empty">No offers sent yet.</div>'}</div>
       </div>
+      ${profilePanelHtml(u)}
     </div>`;
 }
 
@@ -400,11 +433,7 @@ function renderPosterDashboard(){
         ${myOffers.length?`<h3 style="margin-top:18px">Your offers</h3>${myOffers.map(jobCard).join('')}`:''}
       </div>
     </div>
-    <div class="panel">
-      <h2>Your profile</h2>
-      ${profileCard(u,u.role==='worker'?'Worker':'Customer')}
-      <div class="notice">Your account can both post jobs and work jobs. Keep your skills and experience description strong to build credibility.</div>
-    </div>
+    ${profilePanelHtml(u)}
   </div>`;
 }
 function jobCard(j){
@@ -471,7 +500,8 @@ function openJob(id){
   document.getElementById('jobModalTitle').textContent=j.title;document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
   let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> ${esc(j.status)}<br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
   if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer')}</div>`;
-  if(j.status==='open'&&j.customerId===u.id)body+=`<div style="margin-top:12px"><button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
+  const canCancel=(j.status==='open'||j.status==='hired')&&(j.customerId===u.id||(hiredOffer&&hiredOffer.workerId===u.id));
+  if(canCancel)body+=`<div style="margin-top:12px">${j.status==='hired'?'<div class="notice" style="margin-bottom:8px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':''}<button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
   if(j.status==='open'&&j.customerId!==u.id){
     const mine=j.offers.find(o=>o.workerId===u.id);
     body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${mine.status==='pending'?`<button class="btn ghost small danger" onclick="withdrawOffer('${j.id}','${mine.id}')">Withdraw offer</button>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button></div>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
@@ -666,8 +696,14 @@ function withdrawOffer(jobId,offerId){
   },'Withdraw offer');
 }
 function cancelJob(jobId){
-  showConfirm('Cancel this job?','<div class="notice">This removes the job from Browse jobs. Anyone who offered will see it was cancelled.</div>',async()=>{
-    const {error}=await supabaseClient.from('jobs').update({status:'cancelled'}).eq('id',jobId).eq('customer_id',current().id);
+  const j=state.jobs.find(x=>x.id===jobId),u=current();if(!j||!u)return;
+  const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  const isCustomer=j.customerId===u.id;
+  const isHiredWorker=hiredOffer&&hiredOffer.workerId===u.id;
+  if(!isCustomer&&!isHiredWorker)return;
+  const warn=j.status==='hired'?'<div class="notice" style="margin-bottom:10px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':'';
+  showConfirm('Cancel this job?',warn+'<div class="notice">This removes the job from active work. The other person will be notified.</div>',async()=>{
+    const {error}=await supabaseClient.from('jobs').update({status:'cancelled'}).eq('id',jobId);
     if(error){toast(error.message,'error');return}
     await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
   },'Cancel job');
