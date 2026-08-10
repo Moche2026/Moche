@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moche — Get it done. On your terms.</title>
+<meta name="description" content="Moche is a local marketplace for getting everyday jobs done.">
+<style>
+:root{--ink:#111827;--muted:#667085;--bg:#f7f8fa;--card:#fff;--line:#e7e9ee;--accent:#6d5dfc;--accent-dark:#5144d8;--soft:#efedff;--green:#0f9f6e;--danger:#c0392b;--shadow:0 18px 50px rgba(17,24,39,.10);--radius:20px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}button,input,textarea,select{font:inherit}button{cursor:pointer}a{text-decoration:none;color:inherit}.wrap{max-width:1120px;margin:auto;padding:0 24px}
+header{position:sticky;top:0;z-index:20;background:rgba(247,248,250,.9);backdrop-filter:blur(14px);border-bottom:1px solid rgba(231,233,238,.75)}.nav{height:72px;display:flex;align-items:center;justify-content:space-between}.brand{font-size:25px;font-weight:900;letter-spacing:-.04em}.brand span{color:var(--accent)}nav{display:flex;gap:22px;align-items:center;font-size:14px;font-weight:700;color:#4b5563}nav a:hover{color:var(--ink)}
+.btn{display:inline-flex;justify-content:center;align-items:center;min-height:48px;padding:0 18px;border-radius:12px;font-weight:800;font-size:14px;border:1px solid var(--ink);transition:.2s transform,.2s background}.btn:hover{transform:translateY(-1px)}.primary{background:var(--ink);color:#fff}.secondary{background:#fff}.ghost{border-color:var(--line);background:#fff}.small{min-height:38px;padding:0 13px;font-size:13px}
+.hero{padding:82px 0 70px}.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center}.eyebrow{display:inline-flex;background:var(--soft);color:var(--accent-dark);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:800}h1{font-size:clamp(48px,7vw,78px);line-height:.98;letter-spacing:-.065em;margin:18px 0 24px}.hero p{font-size:20px;color:var(--muted);max-width:640px;margin:0 0 32px}.buttons{display:flex;gap:12px;flex-wrap:wrap}
+.hero-card,.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:var(--shadow)}.fake-job{border:1px solid var(--line);border-radius:18px;padding:18px}.fake-top{display:flex;justify-content:space-between}.pill{font-size:12px;background:#f1f2f5;padding:6px 9px;border-radius:999px;color:#596274;font-weight:700}.price{font-size:20px;font-weight:850}.fake-title{font-size:20px;font-weight:850;margin-top:8px}.offers{margin-top:18px;display:grid;gap:9px}.offer{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);padding:11px;border-radius:13px}.person{display:flex;gap:10px;align-items:center}.avatar{width:35px;height:35px;border-radius:50%;background:#e9e7ff;display:grid;place-items:center;font-weight:850;color:var(--accent-dark)}.person strong{display:block;font-size:13px}.person small{color:var(--muted)}.offer-price{font-weight:850}
+section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section-head h2{font-size:42px;letter-spacing:-.045em;margin:0 0 10px}.section-head p{color:var(--muted);font-size:17px;margin:0}.steps,.categories,.features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.features{grid-template-columns:repeat(2,1fr)}.step,.feature,.category{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px}.num{width:38px;height:38px;border-radius:12px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:850;margin-bottom:18px}.step h3,.feature h3,.category h3{margin:0 0 7px}.step p,.feature p,.category p{margin:0;color:var(--muted)}.icon{font-size:24px;margin-bottom:14px}.cta{background:var(--ink);color:#fff;border-radius:28px;padding:50px;display:flex;justify-content:space-between;align-items:center;gap:30px}.cta h2{font-size:42px;letter-spacing:-.05em;margin:0 0 10px}.cta p{color:#cbd1dc;margin:0;max-width:600px}footer{padding:34px 0 50px;color:var(--muted);font-size:13px}.footer-row{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:25px}
+
+.hidden{display:none!important}.app{min-height:calc(100vh - 72px)}.appbar{background:#fff;border-bottom:1px solid var(--line)}.appbar-inner{min-height:66px;display:flex;align-items:center;justify-content:space-between;gap:14px}.appnav{display:flex;gap:8px;flex-wrap:wrap}.tab{border:0;background:transparent;padding:9px 12px;border-radius:10px;font-weight:800;color:#667085}.tab.active{background:var(--soft);color:var(--accent-dark)}.user-chip{font-size:13px;font-weight:800;background:#f1f2f5;padding:8px 11px;border-radius:999px}
+.appmain{padding:38px 0 70px}.appgrid{display:grid;grid-template-columns:1.3fr .7fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px}.panel h2,.panel h3{margin:0 0 7px}.muted{color:var(--muted)}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.toolbar h1{font-size:34px;margin:0;line-height:1}.form{display:grid;gap:14px}.field{display:grid;gap:6px}.field label{font-weight:800;font-size:13px}.field input,.field textarea,.field select{width:100%;border:1px solid #dfe3ea;border-radius:11px;padding:12px 13px;background:#fff;outline:none}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}textarea{min-height:110px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.joblist{display:grid;gap:12px}.job{border:1px solid var(--line);border-radius:16px;padding:17px}.jobtop{display:flex;justify-content:space-between;gap:15px}.job h3{margin:0 0 4px}.jobmeta{font-size:13px;color:var(--muted);margin:4px 0 12px}.jobdesc{font-size:14px;color:#4b5563;margin:0 0 13px}.jobfooter{display:flex;justify-content:space-between;align-items:center;gap:10px}.jobprice{font-size:18px;font-weight:900}.badge{font-size:12px;font-weight:800;padding:5px 8px;border-radius:999px;background:#f1f2f5}.badge.open{background:#eafaf4;color:#087a54}.badge.hired{background:#efedff;color:#5144d8}.badge.done{background:#eef2f7;color:#465160}.offerrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:13px 0}.offerrow:first-child{border-top:0}.offerperson{display:flex;gap:10px;align-items:center}.offeractions{display:flex;gap:7px}.empty{padding:28px;text-align:center;border:1px dashed #d9dde5;border-radius:15px;color:var(--muted)}.profile-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}.profile-head{display:flex;gap:12px;align-items:center}.avatar.big{width:48px;height:48px;font-size:17px}.rating{font-weight:850;font-size:13px;margin-top:2px}.profile-card p{margin:11px 0 0;color:#596274;font-size:13px;line-height:1.55}.offer-bio{margin:9px 0 5px 45px;color:#596274;font-size:13px;line-height:1.45}.offer-note{margin-left:45px;font-size:13px}.notice{padding:11px 13px;border-radius:11px;background:#f4f7ff;color:#43506a;font-size:13px}.toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:#fff;padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:99}.danger{color:var(--danger)}.success{color:var(--green)}.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:grid;place-items:center;padding:20px;z-index:50}.modalbox{background:#fff;border-radius:22px;max-width:520px;width:100%;padding:24px;box-shadow:var(--shadow)}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.close{border:0;background:#f1f2f5;border-radius:50%;width:34px;height:34px;font-size:18px}
+.authtabs{display:flex;gap:6px;padding:4px;background:#f1f2f5;border-radius:12px;margin-bottom:18px}.authtab{flex:1;border:0;background:transparent;padding:10px;border-radius:9px;font-weight:800;font-size:14px;color:#667085}.authtab.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(17,24,39,.08)}
+.toast.error{background:var(--danger)}.toast.success{background:var(--green)}
+.badge.completed{background:#eef2f7;color:#465160}
+.badge.declined{background:#fdeceb;color:#c0392b}.badge.cancelled{background:#fdeceb;color:#c0392b}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.chat-messages{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px;margin-bottom:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfc}
+.chat-msg{display:flex;flex-direction:column;max-width:78%}
+.chat-msg.mine{align-self:flex-end;align-items:flex-end}
+.chat-bubble{background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.chat-msg.mine .chat-bubble{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chat-time{font-size:11px;color:var(--muted);margin-top:3px}
+.quick-replies{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.quick-replies button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;color:#4b5563;cursor:pointer}
+.quick-replies button:hover{background:#f4f5f7}
+.star-input{display:flex;gap:4px}
+@media(max-width:820px){nav a:not(.nav-cta){display:none}.hero{padding-top:55px}.hero-grid,.appgrid{grid-template-columns:1fr}.steps,.categories,.features{grid-template-columns:1fr}.cta{padding:36px 26px;display:block}.cta .buttons{margin-top:24px}.section-head h2,.cta h2{font-size:34px}.two{grid-template-columns:1fr}.appbar-inner{align-items:flex-start;padding-top:12px;padding-bottom:12px;flex-direction:column}}
+</style>
+
+<style id="moche-v3-offer-scroll">
+/* Offer form usability: keep the complete form reachable without browser zoom. */
+.modal, [role="dialog"], .dialog {
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#jobModal .modal-content, #jobModal .panel {
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#jobModalBody form {
+  max-height: 78vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 24px;
+}
+#jobModalBody form button[type="submit"] {
+  display: block;
+  margin-bottom: 8px;
+}
+@media (max-height: 760px) {
+  #jobModal .modal-content, #jobModal .panel { max-height: 94vh; }
+  #jobModalBody form { max-height: 82vh; }
+}
+</style>
+
+
+<style id="moche-role-toggle-css">
+.moche-role-toggle{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(127,127,127,.25);border-radius:999px;background:rgba(127,127,127,.08);width:max-content;margin:0 0 14px}
+.moche-role-label{font-size:.8rem;opacity:.7;padding:0 5px}
+.moche-role-btn{border:0;border-radius:999px;padding:7px 12px;cursor:pointer;background:transparent;color:inherit}
+.moche-role-btn.active{background:currentColor;color:CanvasText}
+@media(max-width:650px){.moche-role-toggle{width:100%;justify-content:center}.moche-role-btn{flex:1}}
+</style>
+
+</head>
+<body>
+<header id="siteHeader">
+  <div class="wrap nav">
+    <a class="brand" href="#" onclick="showLanding();return false">moche<span>.</span></a>
+    <nav>
+      <a href="#how">How it works</a><a href="#jobs">Jobs</a><a href="#why">Why Moche</a>
+      <a class="nav-cta" href="#" onclick="openAuth('customer');return false">Get started</a>
+    </nav>
+  </div>
+</header>
+
+<div id="landing">
+<main>
+<section class="hero"><div class="wrap hero-grid"><div>
+<div class="eyebrow">Local help, on your terms</div><h1>Get it done.<br>On your terms.</h1>
+<p>Post what you need, set your starting price, and let people nearby make you an offer.</p>
+<div class="buttons"><button class="btn primary" onclick="openAuth('customer')">Post a job</button><button class="btn secondary" onclick="openAuth('worker')">Make money with Moche</button></div>
+</div><div class="hero-card"><div class="fake-job"><div class="fake-top"><div><div class="pill">Today · 5 PM</div><div class="fake-title">Move a couch</div><div class="muted" style="font-size:13px">2.1 miles away</div></div><div class="price">$75</div></div>
+<div class="offers"><div class="offer"><div class="person"><div class="avatar">M</div><div><strong>Mike · ★ 4.9</strong><small>Can arrive at 4:30</small></div></div><div class="offer-price">$70</div></div><div class="offer"><div class="person"><div class="avatar">S</div><div><strong>Sarah · ★ 5.0</strong><small>Can arrive at 5:00</small></div></div><div class="offer-price">$75</div></div><div class="offer"><div class="person"><div class="avatar">J</div><div><strong>James · ★ 4.7</strong><small>Can arrive at 5:30</small></div></div><div class="offer-price">$60</div></div></div></div></div></div></section>
+<section id="how"><div class="wrap"><div class="section-head"><h2>Simple from start to finish.</h2><p>Post the job, compare offers, and choose the person who works for you.</p></div><div class="steps"><div class="step"><div class="num">1</div><h3>Post</h3><p>Tell us what you need, when you need it, and your starting price.</p></div><div class="step"><div class="num">2</div><h3>Get offers</h3><p>People nearby can accept your price or negotiate with you.</p></div><div class="step"><div class="num">3</div><h3>Get it done</h3><p>Choose your person, complete the job, and leave a review.</p></div></div></div></section>
+<section id="jobs"><div class="wrap"><div class="section-head"><h2>What can Moche help with?</h2><p>Start with everyday jobs. Expand into whatever our community needs.</p></div><div class="categories"><div class="category"><h3>🪑 Furniture assembly</h3><p>Put together furniture without the headache.</p></div><div class="category"><h3>🗑️ Junk removal</h3><p>Get unwanted stuff out of your way.</p></div><div class="category"><h3>🚚 Moving & lifting</h3><p>Get an extra set of hands when you need them.</p></div><div class="category"><h3>🧽 Cleaning</h3><p>Find nearby help for everyday cleaning.</p></div><div class="category"><h3>🚗 Car detailing</h3><p>Get your car looking fresh.</p></div><div class="category"><h3>🌳 Yard work</h3><p>Lawn cleanup and other outdoor jobs.</p></div></div></div></section>
+<section id="why"><div class="wrap"><div class="section-head"><h2>Why Moche?</h2><p>A marketplace built around flexibility for both sides.</p></div><div class="features"><div class="feature"><div class="icon">💰</div><h3>Set your price</h3><p>Start with what you're willing to pay. Workers can accept or make another offer.</p></div><div class="feature"><div class="icon">📍</div><h3>Find people nearby</h3><p>Jobs are designed around local, real-world help.</p></div><div class="feature"><div class="icon">🤝</div><h3>Choose who you want</h3><p>Compare offers, availability, and worker information before deciding.</p></div><div class="feature"><div class="icon">⭐</div><h3>Build a reputation</h3><p>Completed jobs and reviews help good workers stand out.</p></div></div></div></section>
+<section id="start"><div class="wrap"><div class="cta"><div><h2>Ready to get something done?</h2><p>Sign in or create your Moche account and try the full job → offer → hire flow.</p></div><div class="buttons"><button class="btn primary" style="background:#fff;color:var(--ink);border-color:#fff" onclick="openAuth('customer')">Post a job</button><button class="btn secondary" style="background:transparent;color:#fff;border-color:#fff" onclick="openAuth('worker')">Become a worker</button></div></div></div></section>
+</main>
+<footer><div class="wrap footer-row"><div><strong style="color:var(--ink)">moche.</strong> · Get it done. On your terms.</div><div>© 2026 Moche</div></div></footer>
+</div>
+
+<div id="app" class="hidden">
+<div class="appbar"><div class="wrap appbar-inner"><div class="appnav"><button type="button" class="tab active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button><button type="button" class="tab" data-view="browse" onclick="switchView('browse')">Browse jobs</button><button type="button" class="tab" data-view="post" onclick="switchView('post')">Post a job</button></div><div><span id="userChip" class="user-chip"></span> <button class="btn ghost small" onclick="logout()">Log out</button></div></div></div>
+<main class="appmain"><div class="wrap" id="view"></div></main>
+</div>
+
+<div id="authModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0" id="authTitle">Welcome to Moche</h2><div class="muted" id="authSubtitle">Create an account or sign in</div></div><button class="close" onclick="closeAuth()" aria-label="Close">×</button></div>
+<div class="authtabs" role="tablist" aria-label="Account action">
+  <button type="button" class="authtab active" id="authTabSignup" role="tab" aria-selected="true" onclick="setAuthMode('signup')">Create account</button>
+  <button type="button" class="authtab" id="authTabLogin" role="tab" aria-selected="false" onclick="setAuthMode('login')">Sign in</button>
+</div>
+<form class="form" id="authForm" onsubmit="submitAuth(event)">
+  <div class="field" id="authNameField"><label>Your name</label><input id="authName" placeholder="e.g. Alex Johnson"></div>
+  <div class="field"><label>Email</label><input id="authEmail" type="email" required placeholder="you@example.com" autocomplete="email"></div>
+  <div class="field" id="authRoleField"><label>I want to</label><select id="authRole"><option value="customer">Post jobs / hire people</option><option value="worker">Find jobs / make money</option></select></div>
+  <div class="field hidden" id="authPasswordField"><label id="authPasswordLabel">Password</label><input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="current-password"><div class="muted" id="authForgot" style="font-size:12px;margin-top:4px;cursor:pointer;display:none" onclick="forgotPassword()">Forgot password? Email me a reset link</div></div>
+  <button class="btn primary" type="submit" id="authSubmitBtn">Email me a sign-in link</button>
+  <div class="muted" id="authMethodToggle" style="font-size:13px;text-align:center;cursor:pointer" onclick="toggleAuthMethod()">Prefer a password instead?</div>
+  <div class="notice" id="authNotice">Moche will email you a secure sign-in link — no password needed. Your session stays signed in on this device.</div>
+</form>
+</div></div>
+<div id="jobModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0" id="jobModalTitle">Job</h2><div class="muted" id="jobModalMeta"></div></div><button class="close" onclick="closeJobModal()">×</button></div><div id="jobModalBody"></div></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://pwodchiqrkcyzzfooagr.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_F1uWl8QdJIvIue7zP4zl1Q_2mvZVrC0';
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});
+
+let state={jobs:[],users:[],session:null};
+let pendingProfile=null;
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function money(n){n=Number(n||0);return '$'+(Number.isInteger(n)?n:n.toFixed(2))}
+function cleanText(v){return String(v||'').trim()}
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(type?' '+type:'');el.classList.remove('hidden');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.add('hidden'),2600)}
+function showLanding(){document.getElementById('landing').classList.remove('hidden');document.getElementById('app').classList.add('hidden');document.getElementById('siteHeader').classList.remove('hidden');window.scrollTo(0,0)}
+function busy(btn,label){if(!btn)return;btn._label=btn.textContent;btn.textContent=label;btn.disabled=true}
+function unbusy(btn){if(!btn)return;btn.textContent=btn._label||btn.textContent;btn.disabled=false}
+
+let authMode='signup', authUsePassword=false;
+function setAuthMode(mode){
+  authMode=mode;
+  document.getElementById('authTabSignup').classList.toggle('active',mode==='signup');
+  document.getElementById('authTabSignup').setAttribute('aria-selected',mode==='signup');
+  document.getElementById('authTabLogin').classList.toggle('active',mode==='login');
+  document.getElementById('authTabLogin').setAttribute('aria-selected',mode==='login');
+  document.getElementById('authNameField').classList.toggle('hidden',mode!=='signup');
+  document.getElementById('authRoleField').classList.toggle('hidden',mode!=='signup');
+  document.getElementById('authPasswordLabel').textContent=mode==='signup'?'Create a password':'Password';
+  document.getElementById('authForgot').style.display=(mode==='login'&&authUsePassword)?'block':'none';
+  updateAuthCopy();
+}
+function toggleAuthMethod(){
+  authUsePassword=!authUsePassword;
+  updateAuthCopy();
+}
+function updateAuthCopy(){
+  document.getElementById('authPasswordField').classList.toggle('hidden',!authUsePassword);
+  document.getElementById('authPassword').required=authUsePassword&&authMode==='login';
+  document.getElementById('authForgot').style.display=(authMode==='login'&&authUsePassword)?'block':'none';
+  document.getElementById('authMethodToggle').textContent=authUsePassword?'Use an email link instead':'Prefer a password instead?';
+  const btn=document.getElementById('authSubmitBtn');
+  if(authMode==='signup'){
+    btn.textContent=authUsePassword?'Create account':'Email me a sign-in link';
+    document.getElementById('authNotice').textContent=authUsePassword?'You will sign in instantly with your password. You can add a password later by choosing it now.':'Moche will email you a secure sign-in link — no password needed. Your session stays signed in on this device.';
+  }else{
+    btn.textContent=authUsePassword?'Sign in':'Email me a sign-in link';
+    document.getElementById('authNotice').textContent=authUsePassword?'Enter the password you created for your account.':'Moche will email you a secure sign-in link — no password needed.';
+  }
+}
+async function openAuth(role){
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session?.user){
+    await loadData();
+    showApp();
+    switchView('dashboard');
+    toast('You are already signed in.');
+    return;
+  }
+  document.getElementById('authRole').value=role||'customer';
+  authUsePassword=false;
+  setAuthMode('signup');
+  document.getElementById('authModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('authName')?.focus(),50);
+}
+function closeAuth(){document.getElementById('authModal').classList.add('hidden')}
+async function submitAuth(e){
+  e.preventDefault();
+  const email=cleanText(document.getElementById('authEmail').value).toLowerCase();
+  const name=cleanText(document.getElementById('authName').value);
+  const role=document.getElementById('authRole').value;
+  const password=document.getElementById('authPassword').value;
+  const btn=document.getElementById('authSubmitBtn');
+  if(authMode==='signup'&&!name){toast('Please tell us your name.');return}
+  if(!email){toast('Please add your email.');return}
+  if(authUsePassword&&password&&password.length<6){toast('Password should be at least 6 characters.');return}
+  pendingProfile={name,role};
+  busy(btn,authMode==='signup'?'Creating account…':'Signing in…');
+  try{
+    if(authUsePassword){
+      if(authMode==='signup'){
+        if(!password){toast('Add a password, or switch to an email link.');unbusy(btn);return}
+        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{name,role},emailRedirectTo:window.location.href}});
+        if(error)throw error;
+        if(data?.session){closeAuth();return} // onAuthStateChange handles the rest
+        closeAuth();toast('Account created! Check your email to confirm, then sign in.');
+      }else{
+        const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+        if(error)throw error;
+        closeAuth();
+      }
+    }else{
+      const {error}=await supabaseClient.auth.signInWithOtp({email,options:{data:{name,role},emailRedirectTo:window.location.href,shouldCreateUser:true}});
+      if(error)throw error;
+      closeAuth();
+      toast('Check your email for your secure Moche sign-in link.');
+    }
+  }catch(err){
+    toast(err.message||'Something went wrong.','error');
+  }finally{
+    unbusy(btn);
+  }
+}
+async function forgotPassword(){
+  const email=cleanText(document.getElementById('authEmail').value).toLowerCase();
+  if(!email){toast('Enter your email first.');return}
+  try{
+    const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+    if(error)throw error;
+    toast('Password reset email sent.');
+  }catch(err){toast(err.message||'Could not send reset email.','error')}
+}
+function current(){return state.users.find(u=>u.id===state.session)}
+function getUser(id){return state.users.find(x=>x.id===id)}
+function profileCard(user,label='Profile'){user=user||{};return `<div class="profile-card"><div class="profile-head"><div class="avatar big">${esc((user.name||'?').charAt(0))}</div><div><strong>${esc(user.name||'Moche member')}</strong><div class="rating">★ ${Number(user.rating||5).toFixed(1)} <span class="muted">· ${esc(label)}</span></div></div></div><p>${esc(user.bio||'No profile description yet.')}</p></div>`}
+
+async function ensureProfile(user,name,role){
+  const {data:existing,error:readError}=await supabaseClient.from('profiles').select('id,role').eq('id',user.id).maybeSingle();
+  if(readError)throw readError;
+  if(existing)return existing;
+  const payload={id:user.id,name:name||user.user_metadata?.name||'Moche member',role:role||user.user_metadata?.role||'customer'};
+  const {error}=await supabaseClient.from('profiles').insert(payload);
+  if(error)throw error;
+  return null;
+}
+async function loadData(){
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  state.session=session?.user?.id||null;
+  if(!state.session){state.users=[];state.jobs=[];return}
+  const [pr,jr,or]=await Promise.all([
+    supabaseClient.from('profiles').select('*'),
+    supabaseClient.from('jobs').select('*').order('created_at',{ascending:false}),
+    supabaseClient.from('offers').select('*').order('created_at',{ascending:true})
+  ]);
+  if(pr.error)throw pr.error;
+  if(jr.error)throw jr.error;
+  if(or.error)throw or.error;
+  state.users=pr.data||[];
+  const offers=or.data||[];
+  state.jobs=(jr.data||[]).map(j=>({
+    id:j.id,title:j.title,category:j.category,description:j.description,
+    location:j.location,date:j.scheduled_at,price:j.price,status:j.status,
+    customerId:j.customer_id,customer:getUser(j.customer_id)?.name||'Customer',
+    hiredWorkerId:null,hiredWorker:null,finalPrice:null,
+    offers:offers.filter(o=>o.job_id===j.id).map(o=>({
+      id:o.id,workerId:o.worker_id,worker:getUser(o.worker_id)?.name||'Worker',
+      price:o.price,note:o.message,status:o.status,
+      rating:getUser(o.worker_id)?.rating||5,bio:getUser(o.worker_id)?.bio||''
+    }))
+  }));
+}
+async function refresh(view){
+  try{await loadData(); if(current())showApp(); if(view)switchView(view)}
+  catch(err){console.error(err);toast(err.message||'Could not load Moche data.','error')}
+}
+async function finishAuth(user){
+  if(!user)return;
+  const meta=user.user_metadata||{};
+  const name=pendingProfile?.name||meta.name||user.email?.split('@')[0]||'Moche member';
+  const role=pendingProfile?.role||meta.role||'customer';
+  try{
+    const existing=await ensureProfile(user,name,role);
+    pendingProfile=null;
+    await loadData();
+    showApp();
+    if(!existing&&!localStorage.getItem('mocheMode')){
+      // First-ever sign-in: start the dashboard in the mode that matches what they picked at signup.
+      window.setMocheMode(role==='worker'?'worker':'poster');
+    }else{
+      switchView('dashboard');
+    }
+    toast(existing?('Welcome back, '+name+'!'):('Welcome to Moche, '+name+'!'));
+  }catch(err){console.error(err);toast(err.message||'Could not create your profile.','error')}
+}
+async function logout(){
+  await supabaseClient.auth.signOut();
+  state={jobs:[],users:[],session:null};
+  showLanding();
+  toast('Logged out');
+}
+function showApp(){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('siteHeader').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const u=current();
+  document.getElementById('userChip').textContent=(u?.name||'User')+' · '+(u?.role==='worker'?'Worker':'Customer');
+}
+function switchView(view){
+  const u=current();
+  if(!u){openAuth();return false}
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
+  try{
+    if(view==='dashboard') renderModeDashboard();
+    else if(view==='browse') renderBrowse();
+    else if(view==='post') renderPost();
+    else if(view==='worker') renderWorkerDashboard();
+  }catch(err){console.error(err);document.getElementById('view').innerHTML='<div class="panel"><h2>Page error</h2><p class="muted">'+esc(err.message||String(err))+'</p></div>'}
+  window.scrollTo(0,0);return false;
+}
+
+
+function modeToggleHtml(){
+  return `<div class="moche-role-toggle-wrap">
+    <div id="moche-role-toggle" class="moche-role-toggle" aria-label="Dashboard view">
+      <span class="moche-role-label">Show me</span>
+      <button type="button" id="moche-worker-mode" class="moche-role-btn" onclick="setMocheMode('worker')">Work I'm doing</button>
+      <button type="button" id="moche-poster-mode" class="moche-role-btn" onclick="setMocheMode('poster')">Jobs I've posted</button>
+    </div>
+    <div class="muted" style="font-size:12px;margin:6px 0 14px">Just a view preference — every account can both post jobs and take jobs.</div>
+  </div>`;
+}
+function renderWorkerDashboard(){
+  const u=current();
+  if(!u)return;
+  const hired=state.jobs.filter(j=>
+    (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted')
+  );
+  const myOffers=state.jobs.filter(j=>
+    (j.offers||[]).some(o=>o.workerId===u.id)
+  );
+  document.getElementById('view').innerHTML=`
+    ${modeToggleHtml()}
+    <div class="toolbar">
+      <div>
+        <h1>Work I'm doing</h1>
+        <div class="muted">Jobs you've been hired for and offers you've sent.</div>
+      </div>
+      <button class="btn ghost" onclick="switchView('browse')">Browse jobs</button>
+    </div>
+    <div class="appgrid">
+      <div class="panel">
+        <h2>Jobs you've been hired for</h2>
+        <p class="muted">Open a hired job to see its details.</p>
+        <div class="joblist">${hired.length?hired.map(jobCard).join(''):'<div class="empty">No hired jobs yet. Browse open jobs to send an offer.</div>'}</div>
+      </div>
+      <div class="panel">
+        <h2>Your offers</h2>
+        <p class="muted">Offers you've sent and their current status.</p>
+        <div class="joblist">${myOffers.length?myOffers.map(jobCard).join(''):'<div class="empty">No offers sent yet.</div>'}</div>
+      </div>
+    </div>`;
+}
+
+function renderModeDashboard(){
+  const mode=(typeof window.getMocheMode==='function')?window.getMocheMode():'worker';
+  if(mode==='worker') renderWorkerDashboard();
+  else renderPosterDashboard();
+}
+function renderDashboard(){renderModeDashboard();}
+function renderPosterDashboard(){
+  const u=current();
+  if(!u)return;
+  const posted=state.jobs.filter(j=>j.customerId===u.id);
+  const working=state.jobs.filter(j=>
+    (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted')
+  );
+  const myOffers=state.jobs.filter(j=>(j.offers||[]).some(o=>o.workerId===u.id));
+  document.getElementById('view').innerHTML=`
+  ${modeToggleHtml()}
+<div class="toolbar">
+    <div><h1>Jobs I've posted</h1><div class="muted">Post jobs, review offers, and manage work from one account.</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" onclick="switchView('post')">+ Post a job</button>
+      <button class="btn ghost" onclick="switchView('browse')">Browse jobs</button>
+    </div>
+  </div>
+  <div class="appgrid">
+    <div class="panel">
+      <h2>Jobs you posted</h2>
+      <p class="muted">See your jobs and offers received from other users.</p>
+      <div class="joblist">${posted.length?posted.map(jobCard).join(''):'<div class="empty">You have not posted a job yet.</div>'}</div>
+    </div>
+    <div class="panel">
+      <h2>Your work</h2>
+      <p class="muted">Jobs where you were hired and offers you've sent.</p>
+      <div class="joblist">
+        ${working.length?working.map(jobCard).join(''):'<div class="empty">No accepted jobs yet.</div>'}
+        ${myOffers.length?`<h3 style="margin-top:18px">Your offers</h3>${myOffers.map(jobCard).join('')}`:''}
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Your profile</h2>
+      ${profileCard(u,u.role==='worker'?'Worker':'Customer')}
+      <div class="notice">Your account can both post jobs and work jobs. Keep your skills and experience description strong to build credibility.</div>
+    </div>
+  </div>`;
+}
+function jobCard(j){
+  const u=current(),customer=getUser(j.customerId)||{name:j.customer||'Customer',rating:5,bio:'No profile description yet.'};
+  const mine=(j.offers||[]).filter(o=>o.workerId===u.id);
+  const canOffer=j.status==='open'&&j.customerId!==u.id&&!mine.length;
+  return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div><div class="jobprice">${money(j.price)}</div><span class="badge ${j.status}">${esc(j.status)}</span></div></div>
+  <div style="margin:10px 0">${profileCard(customer,'Customer who posted this job')}</div><p class="jobdesc">${esc(j.description)}</p>
+  <div class="jobfooter"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span>${canOffer?`<button class="btn primary small" onclick="openJob('${j.id}')">View & make offer</button>`:`<button class="btn ghost small" onclick="openJob('${j.id}')">View</button>`}</div>
+  ${j.customerId===u.id?offerList(j):''}${mine.length?`<div class="notice" style="margin-top:10px">Your offer: ${money(mine[0].price)} · ${mine[0].status}</div>`:''}</article>`;
+}
+function offerList(j){
+  if(!j.offers.length)return '<div class="empty" style="margin-top:12px">No offers yet.</div>';
+  return '<div style="margin-top:10px">'+j.offers.map(o=>{
+    const worker=getUser(o.workerId)||{name:o.worker,rating:o.rating,bio:o.bio};
+    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||5).toFixed(1)} <span class="muted">· Worker</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong>${o.status!=='pending'?`<span class="badge ${esc(o.status)}">${esc(o.status)}</span>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn ghost small danger" onclick="declineOffer('${j.id}','${o.id}')">Decline</button><button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
+  }).join('')+'</div>';
+}
+let browseFilter='';
+function renderBrowse(){
+  const u=current();
+  const sel=document.getElementById('filter');
+  if(sel)browseFilter=sel.value;
+  let jobs=state.jobs.filter(j=>j.status==='open'&&j.customerId!==u.id);
+  if(browseFilter)jobs=jobs.filter(j=>j.category===browseFilter);
+  const categories=['Moving & lifting','Furniture assembly','Junk removal','Cleaning','Car detailing','Yard work','Other'];
+  document.getElementById('view').innerHTML=`<div class="toolbar"><div><h1>Browse jobs</h1><div class="muted">${jobs.length} open job${jobs.length===1?'':'s'}${browseFilter?' in '+esc(browseFilter):''}.</div></div><select id="filter" onchange="renderBrowse()" style="padding:10px;border:1px solid var(--line);border-radius:10px"><option value="">All categories</option>${categories.map(c=>`<option ${c===browseFilter?'selected':''}>${esc(c)}</option>`).join('')}</select></div><div class="joblist">${jobs.map(jobCard).join('')||`<div class="empty">No open jobs${browseFilter?' in this category':''} right now.</div>`}</div>`;
+}
+function renderPost(){
+  document.getElementById('view').innerHTML=`<div class="toolbar"><div><h1>Post a job</h1><div class="muted">Tell the Moche community what you need done.</div></div></div><div class="panel" style="max-width:760px"><form class="form" onsubmit="createJob(event)"><div class="field"><label>Job title</label><input id="jt" required placeholder="e.g. Move a couch"></div><div class="two"><div class="field"><label>Category</label><select id="jc" onchange="toggleOtherCategory()"><option>Moving & lifting</option><option>Furniture assembly</option><option>Junk removal</option><option>Cleaning</option><option>Car detailing</option><option>Yard work</option><option>Other</option></select></div><div class="field"><label>Starting price</label><input id="jp" type="number" min="1" step="1" required placeholder="75"></div></div><div id="otherCategoryWrap" class="field hidden"><label>What type of job is it?</label><input id="jo" placeholder="e.g. Photography, tutoring, delivery"></div><div class="two"><div class="field"><label>When?</label><input id="jd" required placeholder="Tomorrow · 3:00 PM"></div><div class="field"><label>Where?</label><input id="jl" required placeholder="Neighborhood or area"></div></div><div class="field"><label>Describe the job</label><textarea id="jdesc" required placeholder="What needs to be done? Mention anything important a worker should know."></textarea></div><button class="btn primary" type="submit">Review & post job</button></form></div>`;
+}
+function toggleOtherCategory(){const isOther=document.getElementById('jc')?.value==='Other';document.getElementById('otherCategoryWrap')?.classList.toggle('hidden',!isOther)}
+function showConfirm(title,html,onConfirm,confirmLabel){
+  document.getElementById('jobModalTitle').textContent=title;
+  document.getElementById('jobModalMeta').textContent='Please check every detail before continuing.';
+  document.getElementById('jobModalBody').innerHTML=html+`<div class="buttons" style="margin-top:20px"><button class="btn ghost" id="confirmCancel">Go back & edit</button><button class="btn primary" id="confirmAction">${esc(confirmLabel||'Everything is correct')}</button></div>`;
+  document.getElementById('jobModal').classList.remove('hidden');
+  document.getElementById('confirmCancel').onclick=closeJobModal;
+  const btn=document.getElementById('confirmAction');
+  btn.onclick=async()=>{
+    if(btn.disabled)return;
+    busy(btn,'Working…');
+    document.getElementById('confirmCancel').disabled=true;
+    try{await onConfirm()}
+    finally{if(document.getElementById('confirmAction')){unbusy(btn);document.getElementById('confirmCancel').disabled=false}}
+  };
+}
+async function createJob(e){
+  e.preventDefault();
+  const u=current(),category=document.getElementById('jc').value,other=cleanText(document.getElementById('jo')?.value);
+  if(category==='Other'&&!other){toast('Please describe the type of job.');return}
+  const j={title:cleanText(document.getElementById('jt').value),category:category==='Other'?other:category,price:Number(document.getElementById('jp').value),date:cleanText(document.getElementById('jd').value),location:cleanText(document.getElementById('jl').value),description:cleanText(document.getElementById('jdesc').value)};
+  showConfirm('Confirm your job',`<div class="notice" style="margin-bottom:14px">This is the information workers will see. Please make sure it is accurate.</div><div class="form"><div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>Type</strong><br>${esc(j.category)}</div><div><strong>Starting price</strong><br>${money(j.price)}</div><div><strong>When</strong><br>${esc(j.date)}</div><div><strong>Where</strong><br>${esc(j.location)}</div><div><strong>Description</strong><br>${esc(j.description)}</div></div>`,async()=>{
+    const {data,error}=await supabaseClient.from('jobs').insert({customer_id:u.id,title:j.title,category:j.category,description:j.description,price:j.price,location:j.location,scheduled_at:j.date,status:'open'}).select().single();
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Job posted!','success');switchView('dashboard');
+  });
+}
+function openJob(id){
+  const j=state.jobs.find(x=>x.id===id),u=current();if(!j||!u)return;
+  unsubscribeChat();currentChat=null;
+  const customer=getUser(j.customerId)||{name:j.customer||'Customer',rating:5,bio:'No profile description yet.'};
+  const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  document.getElementById('jobModalTitle').textContent=j.title;document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
+  let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> ${esc(j.status)}<br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
+  if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer')}</div>`;
+  if(j.status==='open'&&j.customerId===u.id)body+=`<div style="margin-top:12px"><button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
+  if(j.status==='open'&&j.customerId!==u.id){
+    const mine=j.offers.find(o=>o.workerId===u.id);
+    body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${mine.status==='pending'?`<button class="btn ghost small danger" onclick="withdrawOffer('${j.id}','${mine.id}')">Withdraw offer</button>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button></div>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
+  }
+  if((j.status==='hired'||j.status==='completed')&&hiredOffer){
+    if(j.customerId===u.id){
+      const worker=getUser(hiredOffer.workerId)||{name:hiredOffer.worker,rating:5,bio:''};
+      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message ${esc(worker.name||'worker')}</button>
+        ${j.status==='hired'?`<button class="btn primary small" onclick="markComplete('${j.id}')">Mark job complete</button>`:''}
+      </div></div>`;
+    }else if(hiredOffer.workerId===u.id){
+      body+=`<div class="notice" style="margin-top:12px">You're hired for this job at ${money(hiredOffer.price)}.</div><button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`;
+    }else{
+      body+=`<div class="notice" style="margin-top:12px">This job has been filled.</div>`;
+    }
+  }
+  if(j.status==='completed')body+=`<div id="reviewSection" style="margin-top:16px"><h3>Reviews</h3><div class="muted">Loading…</div></div>`;
+  if(j.customerId===u.id)body+=`<div style="margin-top:16px"><h3>Offers received · compare ratings & skills</h3>${offerList(j)}</div>`;
+  document.getElementById('jobModalBody').innerHTML=body;document.getElementById('jobModal').classList.remove('hidden');
+  if(j.status==='completed')loadReviewSection(j,u,hiredOffer);
+}
+function closeJobModal(){document.getElementById('jobModal').classList.add('hidden');unsubscribeChat();currentChat=null}
+
+/* ---------- Messaging ---------- */
+let currentChat=null, chatSub=null;
+function chatPanelHtml(){
+  return `<div id="chatPanel">
+    <div id="chatMessages" class="chat-messages"><div class="muted">Loading messages…</div></div>
+    <form id="chatForm" class="chat-form" onsubmit="sendMessage(event)">
+      <div class="quick-replies">
+        <button type="button" onclick="quickMessage('I\u2019m on my way!')">🚗 On my way</button>
+        <button type="button" onclick="quickMessage('Running a little late, sorry!')">⏰ Running late</button>
+        <button type="button" onclick="quickMessage('Job is done!')">✅ Job done</button>
+        <button type="button" onclick="quickMessage('Could we agree on a different price?')">💬 Negotiate price</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="chatInput" placeholder="Type a message…" autocomplete="off" style="flex:1" maxlength="1000">
+        <button class="btn primary small" type="submit">Send</button>
+      </div>
+    </form>
+  </div>`;
+}
+async function openChat(jobId,workerId){
+  const j=state.jobs.find(x=>x.id===jobId),u=current();if(!j||!u)return;
+  const other=(u.id===workerId)?(getUser(j.customerId)||{name:j.customer||'Customer'}):(getUser(workerId)||{name:'Worker'});
+  unsubscribeChat();
+  currentChat={jobId,workerId};
+  document.getElementById('jobModalTitle').textContent='Messages · '+(other.name||'Moche member');
+  document.getElementById('jobModalMeta').textContent=j.title;
+  document.getElementById('jobModalBody').innerHTML=`<button type="button" class="btn ghost small" onclick="openJob('${jobId}')" style="margin-bottom:14px">← Back to job</button>`+chatPanelHtml();
+  await loadMessages();
+  subscribeChat();
+  setTimeout(()=>document.getElementById('chatInput')?.focus(),50);
+}
+async function loadMessages(){
+  if(!currentChat)return;
+  const {jobId,workerId}=currentChat;
+  const box=document.getElementById('chatMessages');if(!box)return;
+  const {data,error}=await supabaseClient.from('messages').select('*').eq('job_id',jobId).eq('worker_id',workerId).order('created_at',{ascending:true});
+  if(!document.getElementById('chatMessages'))return; // modal moved on while awaiting
+  if(error){box.innerHTML='<div class="empty">Could not load messages.</div>';return}
+  const u=current();
+  box.innerHTML=(data&&data.length)?data.map(m=>`<div class="chat-msg${m.sender_id===u.id?' mine':''}"><div class="chat-bubble">${esc(m.body)}</div><div class="chat-time">${esc(new Date(m.created_at).toLocaleString([], {hour:'2-digit',minute:'2-digit',month:'short',day:'numeric'}))}</div></div>`).join(''):'<div class="empty">No messages yet. Say hello!</div>';
+  box.scrollTop=box.scrollHeight;
+}
+async function sendMessage(e){
+  e.preventDefault();
+  if(!currentChat)return;
+  const input=document.getElementById('chatInput');
+  const body=cleanText(input.value);
+  if(!body)return;
+  const u=current();
+  input.value='';
+  const {error}=await supabaseClient.from('messages').insert({job_id:currentChat.jobId,worker_id:currentChat.workerId,sender_id:u.id,body});
+  if(error){toast(error.message,'error');input.value=body;return}
+  await loadMessages();
+}
+function quickMessage(text){
+  const input=document.getElementById('chatInput');if(!input)return;
+  input.value=text;
+  document.getElementById('chatForm').requestSubmit();
+}
+function subscribeChat(){
+  if(!currentChat)return;
+  chatSub=supabaseClient.channel('messages-'+currentChat.jobId+'-'+currentChat.workerId)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`job_id=eq.${currentChat.jobId}`},payload=>{
+      if(currentChat&&payload.new.worker_id===currentChat.workerId)loadMessages();
+    })
+    .subscribe();
+}
+function unsubscribeChat(){
+  if(chatSub){supabaseClient.removeChannel(chatSub);chatSub=null}
+}
+
+/* ---------- Completion & reviews ---------- */
+function markComplete(jobId){
+  const j=state.jobs.find(x=>x.id===jobId);if(!j)return;
+  showConfirm('Mark this job as complete?','<div class="notice">Only confirm once the work is actually finished. This lets both of you leave a review.</div>',async()=>{
+    const {error}=await supabaseClient.from('jobs').update({status:'completed'}).eq('id',jobId).eq('customer_id',current().id);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Job marked complete — you can leave a review now!','success');switchView('dashboard');
+  },'Mark complete');
+}
+async function loadReviewSection(j,u,hiredOffer){
+  const el=document.getElementById('reviewSection');if(!el)return;
+  const {data,error}=await supabaseClient.from('reviews').select('*').eq('job_id',j.id);
+  if(!document.getElementById('reviewSection'))return;
+  if(error){el.innerHTML='<h3>Reviews</h3><div class="empty">Could not load reviews.</div>';return}
+  const reviews=data||[];
+  const isCustomer=j.customerId===u.id;
+  const otherId=isCustomer?hiredOffer?.workerId:j.customerId;
+  const otherName=isCustomer?(getUser(otherId)?.name||hiredOffer?.worker||'Worker'):(getUser(otherId)?.name||j.customer||'Customer');
+  const myReview=reviews.find(r=>r.reviewer_id===u.id);
+  const theirReview=otherId?reviews.find(r=>r.reviewer_id===otherId):null;
+  let html='<h3>Reviews</h3>';
+  if(theirReview){
+    html+=`<div class="profile-card" style="margin-bottom:10px"><strong>${esc(otherName)} said:</strong><div class="rating">${'★'.repeat(theirReview.rating)}${'☆'.repeat(5-theirReview.rating)}</div><p>${esc(theirReview.comment||'No comment left.')}</p></div>`;
+  }
+  if(myReview){
+    html+=`<div class="notice">You rated ${esc(otherName)} ${myReview.rating}★. Thanks for the feedback!</div>`;
+  }else if(otherId){
+    html+=`<form class="form" id="reviewForm" onsubmit="submitReview(event,'${j.id}','${otherId}')">
+      <div class="field"><label>Rate ${esc(otherName)}</label>
+        <select id="reviewRating" required>
+          <option value="">Choose a rating</option>
+          <option value="5">★★★★★ Excellent</option>
+          <option value="4">★★★★ Good</option>
+          <option value="3">★★★ Okay</option>
+          <option value="2">★★ Not great</option>
+          <option value="1">★ Poor</option>
+        </select>
+      </div>
+      <div class="field"><label>Comment (optional)</label><textarea id="reviewComment" placeholder="How did it go?"></textarea></div>
+      <button class="btn primary small" type="submit">Submit review</button>
+    </form>`;
+  }else{
+    html+='<div class="empty">Nothing to review yet.</div>';
+  }
+  el.innerHTML=html;
+}
+async function submitReview(e,jobId,revieweeId){
+  e.preventDefault();
+  const rating=Number(document.getElementById('reviewRating').value);
+  const comment=cleanText(document.getElementById('reviewComment').value);
+  if(!rating){toast('Please choose a rating.');return}
+  const btn=e.target.querySelector('button[type=submit]');
+  busy(btn,'Submitting…');
+  const {error}=await supabaseClient.from('reviews').insert({job_id:jobId,reviewer_id:current().id,reviewee_id:revieweeId,rating,comment:comment||null});
+  if(error){unbusy(btn);toast(error.message,'error');return}
+  await loadData();
+  toast('Review submitted!','success');
+  const j=state.jobs.find(x=>x.id===jobId);
+  if(j)openJob(jobId);
+}
+async function makeOffer(e,id){
+  e.preventDefault();
+  const j=state.jobs.find(x=>x.id===id),u=current();if(!j||!u)return;
+  if(j.offers.some(o=>o.workerId===u.id)){toast('You already made an offer');return}
+  const price=Number(document.getElementById('offerPrice').value),note=cleanText(document.getElementById('offerNote').value);
+  if(!price||!note){toast('Add an offer amount and a short message.');return}
+  showConfirm('Confirm your offer',`<div class="notice" style="margin-bottom:14px">Check the customer, job, price, and your message before sending.</div><div class="form"><div><strong>Customer</strong><br>${esc(j.customer)}</div>${profileCard(getUser(j.customerId)||{name:j.customer,rating:5,bio:''},'Customer')}<div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>When / Where</strong><br>${esc(j.date)} · ${esc(j.location)}</div><div><strong>Your offer</strong><br>${money(price)}</div><div><strong>Your message</strong><br>${esc(note)}</div></div>`,async()=>{
+    const {error}=await supabaseClient.from('offers').insert({job_id:j.id,worker_id:u.id,price,message:note,status:'pending'});
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Offer sent to '+j.customer+'!','success');switchView('browse');
+  });
+}
+function hire(jobId,offerId){
+  const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
+  showConfirm('Confirm hire',`<div class="notice" style="margin-bottom:14px">This marks the job as hired, notifies ${esc(o.worker)}, and declines any other pending offers on this job.</div><div class="form"><div><strong>Worker</strong><br>${esc(o.worker)}</div><div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>Agreed price</strong><br>${money(o.price)}</div></div>`,async()=>{
+    const {error:oe}=await supabaseClient.from('offers').update({status:'accepted'}).eq('id',offerId).eq('job_id',jobId);
+    if(oe){toast(oe.message,'error');return}
+    await supabaseClient.from('offers').update({status:'declined'}).eq('job_id',jobId).eq('status','pending').neq('id',offerId);
+    const {error:je}=await supabaseClient.from('jobs').update({status:'hired'}).eq('id',jobId).eq('customer_id',current().id);
+    if(je){toast(je.message,'error');return}
+    await loadData();closeJobModal();toast(`${o.worker} is hired!`,'success');switchView('dashboard');
+  },'Hire this worker');
+}
+function declineOffer(jobId,offerId){
+  const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
+  showConfirm('Decline this offer?',`<div class="notice">${esc(o.worker)} will be able to see their offer was declined.</div>`,async()=>{
+    const {error}=await supabaseClient.from('offers').update({status:'declined'}).eq('id',offerId).eq('job_id',jobId);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Offer declined','success');switchView('dashboard');
+  },'Decline offer');
+}
+function withdrawOffer(jobId,offerId){
+  showConfirm('Withdraw your offer?','<div class="notice">The customer will no longer see this as an active offer, and you can send a new one later.</div>',async()=>{
+    const {error}=await supabaseClient.from('offers').delete().eq('id',offerId).eq('worker_id',current().id);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Offer withdrawn','success');switchView('dashboard');
+  },'Withdraw offer');
+}
+function cancelJob(jobId){
+  showConfirm('Cancel this job?','<div class="notice">This removes the job from Browse jobs. Anyone who offered will see it was cancelled.</div>',async()=>{
+    const {error}=await supabaseClient.from('jobs').update({status:'cancelled'}).eq('id',jobId).eq('customer_id',current().id);
+    if(error){toast(error.message,'error');return}
+    await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
+  },'Cancel job');
+}
+
+async function initMoche(){
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session?.user){
+    try{
+      const {data:p}=await supabaseClient.from('profiles').select('id').eq('id',session.user.id).maybeSingle();
+      if(!p)await ensureProfile(session.user,session.user.user_metadata?.name||session.user.email?.split('@')[0],session.user.user_metadata?.role||'customer');
+      await loadData();showApp();switchView('dashboard');
+    }catch(err){console.error(err);toast(err.message||'Could not load Moche.','error');showLanding();}
+  }else showLanding();
+}
+supabaseClient.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_IN' && session?.user){
+    setTimeout(async()=>{try{await finishAuth(session.user)}catch(err){console.error(err)}},0);
+  }
+  if(event==='SIGNED_OUT'){
+    state={jobs:[],users:[],session:null};
+    showLanding();
+  }
+});
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal()}});
+function handleAuthRedirectError(){
+  const raw=(window.location.hash||'').replace(/^#/,'')||(window.location.search||'').replace(/^\?/,'');
+  if(!raw||!raw.includes('error'))return;
+  const params=new URLSearchParams(raw);
+  const desc=params.get('error_description')||params.get('error')||'';
+  if(desc){toast(decodeURIComponent(desc.replace(/\+/g,' ')),'error')}
+  history.replaceState(null,'',window.location.pathname+window.location.search.replace(/[?&](error[^&]*|error_description[^&]*)/g,''));
+}
+handleAuthRedirectError();
+initMoche();
+</script>
+
+<script id="moche-role-toggle-js">
+(function(){
+  window.setMocheMode=function(mode){
+    localStorage.setItem('mocheMode', mode);
+    window.mocheMode=mode;
+    document.documentElement.setAttribute('data-moche-mode', mode);
+    document.querySelectorAll('.moche-role-btn').forEach(function(b){b.classList.remove('active')});
+    var active=document.getElementById(mode==='worker'?'moche-worker-mode':'moche-poster-mode');
+    if(active) active.classList.add('active');
+    if(typeof window.switchView==='function') window.switchView('dashboard');
+    else if(typeof window.renderDashboard==='function') window.renderDashboard();
+  };
+  window.getMocheMode=function(){
+    var stored=localStorage.getItem('mocheMode');
+    if(stored)return stored;
+    var u=(typeof window.current==='function')?window.current():null;
+    return (u&&u.role==='customer')?'poster':'worker';
+  };
+  function initMocheMode(){
+    var mode=window.getMocheMode();
+    window.mocheMode=mode;
+    document.documentElement.setAttribute('data-moche-mode', mode);
+    var active=document.getElementById(mode==='worker'?'moche-worker-mode':'moche-poster-mode');
+    if(active) active.classList.add('active');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initMocheMode);
+  else initMocheMode();
+})();
+</script>
+
+</body>
+</html>
