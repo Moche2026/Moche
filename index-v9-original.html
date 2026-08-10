@@ -85,21 +85,16 @@ function logout(){state.session=null;save();showLanding();toast('Logged out')}
 function current(){return state.users.find(u=>u.id===state.session)}
 function showApp(){document.getElementById('landing').classList.add('hidden');document.getElementById('siteHeader').classList.add('hidden');document.getElementById('app').classList.remove('hidden');const u=current();document.getElementById('userChip').textContent=(u?.name||'User')+' · '+(u?.role==='worker'?'Worker':'Customer')}
 function switchView(view){
-  var u=current();
-  if(!u){openAuth();return false;}
-  document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
-  var tab=document.querySelector('.tab[data-view="'+view+'"]');
-  if(tab)tab.classList.add('active');
+  const u=current();
+  if(!u){openAuth();return false}
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
   try{
-    if(view==='dashboard') renderDashboard();
+    if(view==='dashboard') renderModeDashboard();
     else if(view==='browse') renderBrowse();
     else if(view==='post') renderPost();
-  }catch(err){
-    console.error(err);
-    document.getElementById('view').innerHTML='<div class="panel"><h2>Page error</h2><p class="muted">'+esc(err.message||String(err))+'</p></div>';
-  }
-  window.scrollTo(0,0);
-  return false;
+    else if(view==='worker') renderWorkerDashboard();
+  }catch(err){console.error(err);document.getElementById('view').innerHTML='<div class="panel"><h2>Page error</h2><p class="muted">'+esc(err.message||String(err))+'</p></div>'}
+  window.scrollTo(0,0);return false;
 }
 
 
@@ -114,6 +109,11 @@ function renderWorkerDashboard(){
     (j.offers||[]).some(o=>o.workerId===u.id)
   );
   document.getElementById('view').innerHTML=`
+    <div id="moche-role-toggle" class="moche-role-toggle" aria-label="Moche mode">
+      <span class="moche-role-label">Mode</span>
+      <button type="button" id="moche-worker-mode" class="moche-role-btn" onclick="setMocheMode('worker')">Worker</button>
+      <button type="button" id="moche-poster-mode" class="moche-role-btn" onclick="setMocheMode('poster')">Post Jobs</button>
+    </div>
     <div class="toolbar">
       <div>
         <h1>Worker</h1>
@@ -158,14 +158,10 @@ function renderWorkerDashboard(){
 
 
 function renderModeDashboard(){
-  const mode = (window.mocheMode || localStorage.getItem('mocheMode') || 'worker');
-  if(mode === 'worker' && typeof renderWorkerDashboard === 'function'){
-    renderWorkerDashboard();
-  } else if(typeof renderDashboard === 'function'){
-    renderDashboard();
-  }
+  const mode=(window.mocheMode||localStorage.getItem('mocheMode')||'worker');
+  if(mode==='worker') renderWorkerDashboard();
+  else renderPosterDashboard();
 }
-
 function renderDashboard(){renderModeDashboard();}
 function renderPosterDashboard(){const u=current();const mine=state.jobs.filter(j=>j.customerId===u.id);const hired=state.jobs.filter(j=>j.offers.some(o=>o.workerId===u.id));document.getElementById('view').innerHTML=u.role==='customer'?`
 
