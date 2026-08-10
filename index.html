@@ -683,8 +683,9 @@ function unsubscribeChat(){
 function markComplete(jobId){
   const j=state.jobs.find(x=>x.id===jobId);if(!j)return;
   showConfirm('Mark this job as complete?','<div class="notice">Only confirm once the work is actually finished. This lets both of you leave a review.</div>',async()=>{
-    const {error}=await supabaseClient.from('jobs').update({status:'completed'}).eq('id',jobId).eq('customer_id',current().id);
+    const {data,error}=await supabaseClient.from('jobs').update({status:'completed'}).eq('id',jobId).eq('customer_id',current().id).select();
     if(error){toast(error.message,'error');return}
+    if(!checkWrite(data,'the job'))return;
     await loadData();closeJobModal();toast('Job marked complete — you can leave a review now!','success');switchView('dashboard');
   },'Mark complete');
 }
@@ -764,7 +765,8 @@ function hire(jobId,offerId){
     const {data:od,error:oe}=await supabaseClient.from('offers').update({status:'accepted'}).eq('id',offerId).eq('job_id',jobId).select();
     if(oe){toast(oe.message,'error');return}
     if(!checkWrite(od,'the offer'))return;
-    await supabaseClient.from('offers').update({status:'declined'}).eq('job_id',jobId).eq('status','pending').neq('id',offerId);
+    const {error:de}=await supabaseClient.from('offers').update({status:'declined'}).eq('job_id',jobId).eq('status','pending').neq('id',offerId);
+    if(de)console.error('Could not decline other offers:',de.message);
     const {data:jd,error:je}=await supabaseClient.from('jobs').update({status:'hired'}).eq('id',jobId).eq('customer_id',current().id).select();
     if(je){toast(je.message,'error');return}
     if(!checkWrite(jd,'the job'))return;
