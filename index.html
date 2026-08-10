@@ -634,6 +634,7 @@ async function openChat(jobId,workerId){
   document.getElementById('jobModalTitle').textContent='Messages · '+(other.name||'Moche member');
   document.getElementById('jobModalMeta').textContent=j.title;
   document.getElementById('jobModalBody').innerHTML=`<button type="button" class="btn ghost small" onclick="openJob('${jobId}')" style="margin-bottom:14px">← Back to job</button>`+chatPanelHtml();
+  document.getElementById('jobModal').classList.remove('hidden');
   await loadMessages();
   subscribeChat();
   setTimeout(()=>document.getElementById('chatInput')?.focus(),50);
@@ -750,22 +751,32 @@ async function makeOffer(e,id){
     await loadData();closeJobModal();toast('Offer sent to '+j.customer+'!','success');switchView('browse');
   });
 }
+function checkWrite(data,label){
+  if(!data||!data.length){
+    toast(`Couldn't update ${label} — this may be blocked by a database permission (RLS policy).`,'error');
+    return false;
+  }
+  return true;
+}
 function hire(jobId,offerId){
   const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
   showConfirm('Confirm hire',`<div class="notice" style="margin-bottom:14px">This marks the job as hired, notifies ${esc(o.worker)}, and declines any other pending offers on this job.</div><div class="form"><div><strong>Worker</strong><br>${esc(o.worker)}</div><div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>Agreed price</strong><br>${money(o.price)}</div></div>`,async()=>{
-    const {error:oe}=await supabaseClient.from('offers').update({status:'accepted'}).eq('id',offerId).eq('job_id',jobId);
+    const {data:od,error:oe}=await supabaseClient.from('offers').update({status:'accepted'}).eq('id',offerId).eq('job_id',jobId).select();
     if(oe){toast(oe.message,'error');return}
+    if(!checkWrite(od,'the offer'))return;
     await supabaseClient.from('offers').update({status:'declined'}).eq('job_id',jobId).eq('status','pending').neq('id',offerId);
-    const {error:je}=await supabaseClient.from('jobs').update({status:'hired'}).eq('id',jobId).eq('customer_id',current().id);
+    const {data:jd,error:je}=await supabaseClient.from('jobs').update({status:'hired'}).eq('id',jobId).eq('customer_id',current().id).select();
     if(je){toast(je.message,'error');return}
+    if(!checkWrite(jd,'the job'))return;
     await loadData();closeJobModal();toast(`${o.worker} is hired!`,'success');switchView('dashboard');
   },'Hire this worker');
 }
 function declineOffer(jobId,offerId){
   const j=state.jobs.find(x=>x.id===jobId),o=j?.offers.find(x=>x.id===offerId);if(!j||!o)return;
   showConfirm('Decline this offer?',`<div class="notice">${esc(o.worker)} will be able to see their offer was declined.</div>`,async()=>{
-    const {error}=await supabaseClient.from('offers').update({status:'declined'}).eq('id',offerId).eq('job_id',jobId);
+    const {data,error}=await supabaseClient.from('offers').update({status:'declined'}).eq('id',offerId).eq('job_id',jobId).select();
     if(error){toast(error.message,'error');return}
+    if(!checkWrite(data,'the offer'))return;
     await loadData();closeJobModal();toast('Offer declined','success');switchView('dashboard');
   },'Decline offer');
 }
@@ -784,8 +795,9 @@ function cancelJob(jobId){
   if(!isCustomer&&!isHiredWorker)return;
   const warn=j.status==='hired'?'<div class="notice" style="margin-bottom:10px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':'';
   showConfirm('Cancel this job?',warn+'<div class="notice">This removes the job from active work. The other person will be notified.</div>',async()=>{
-    const {error}=await supabaseClient.from('jobs').update({status:'cancelled',cancelled_by:u.id}).eq('id',jobId);
+    const {data,error}=await supabaseClient.from('jobs').update({status:'cancelled',cancelled_by:u.id}).eq('id',jobId).select();
     if(error){toast(error.message,'error');return}
+    if(!checkWrite(data,'the job'))return;
     await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
   },'Cancel job');
 }
@@ -794,8 +806,9 @@ function progressLabel(p){
 }
 async function setProgress(jobId,val){
   const u=current();if(!u)return;
-  const {error}=await supabaseClient.from('jobs').update({progress_status:val,progress_updated_by:u.id}).eq('id',jobId);
+  const {data,error}=await supabaseClient.from('jobs').update({progress_status:val,progress_updated_by:u.id}).eq('id',jobId).select();
   if(error){toast(error.message,'error');return}
+  if(!checkWrite(data,'the status'))return;
   await loadData();openJob(jobId);toast('Status updated','success');
 }
 
