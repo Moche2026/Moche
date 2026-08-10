@@ -102,7 +102,72 @@ function switchView(view){
   return false;
 }
 
-function renderDashboard(){const u=current();const mine=state.jobs.filter(j=>j.customerId===u.id);const hired=state.jobs.filter(j=>j.offers.some(o=>o.workerId===u.id));document.getElementById('view').innerHTML=u.role==='customer'?`
+
+function renderWorkerDashboard(){
+  const u=current();
+  if(!u)return;
+  const hired=state.jobs.filter(j=>
+    j.hiredWorkerId===u.id ||
+    (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted')
+  );
+  const myOffers=state.jobs.filter(j=>
+    (j.offers||[]).some(o=>o.workerId===u.id)
+  );
+  document.getElementById('view').innerHTML=`
+    <div class="toolbar">
+      <div>
+        <h1>Worker</h1>
+        <div class="muted">Your hired jobs and offers.</div>
+      </div>
+      <button class="btn ghost" onclick="switchView('browse')">Browse jobs</button>
+    </div>
+    <div class="appgrid">
+      <div class="panel">
+        <h2>Jobs you've been hired for</h2>
+        <p class="muted">Open a hired job to see its details and continue the work.</p>
+        <div class="joblist">
+          ${hired.length ? hired.map(function(j){
+            return `<div class="job-card">
+              <div>
+                <h3>${escapeHtml(j.title||'Untitled job')}</h3>
+                <div class="muted">${escapeHtml(j.category||'Other')} · ${escapeHtml(j.location||'Location not specified')}</div>
+                <div class="job-status">Hired</div>
+              </div>
+              <button class="btn primary" onclick="openJob('${j.id}')">Open job</button>
+            </div>`;
+          }).join('') : '<div class="empty">No hired jobs yet.</div>'}
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Your offers</h2>
+        <p class="muted">Offers you've sent and their current status.</p>
+        <div class="joblist">
+          ${myOffers.length ? myOffers.map(function(j){
+            return `<div class="job-card">
+              <div>
+                <h3>${escapeHtml(j.title||'Untitled job')}</h3>
+                <div class="muted">${(j.offers||[]).filter(o=>o.workerId===u.id).map(o=>escapeHtml(o.status||'pending')).join(', ')}</div>
+              </div>
+              <button class="btn ghost" onclick="openJob('${j.id}')">View job</button>
+            </div>`;
+          }).join('') : '<div class="empty">No offers sent yet.</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+
+function renderModeDashboard(){
+  const mode = (window.mocheMode || localStorage.getItem('mocheMode') || 'worker');
+  if(mode === 'worker' && typeof renderWorkerDashboard === 'function'){
+    renderWorkerDashboard();
+  } else if(typeof renderDashboard === 'function'){
+    renderDashboard();
+  }
+}
+
+function renderDashboard(){renderModeDashboard();}
+function renderPosterDashboard(){const u=current();const mine=state.jobs.filter(j=>j.customerId===u.id);const hired=state.jobs.filter(j=>j.offers.some(o=>o.workerId===u.id));document.getElementById('view').innerHTML=u.role==='customer'?`
 
 <div id="moche-role-toggle" class="moche-role-toggle" aria-label="Moche mode">
   <span class="moche-role-label">Mode</span>
@@ -142,7 +207,7 @@ showLanding();
     document.querySelectorAll('.moche-role-btn').forEach(function(b){b.classList.remove('active')});
     var active=document.getElementById(mode==='worker'?'moche-worker-mode':'moche-poster-mode');
     if(active) active.classList.add('active');
-    if(typeof window.switchView==='function') window.switchView(mode==='worker'?'browse':'post');
+    if(typeof window.switchView==='function') window.switchView('dashboard');
     else if(typeof window.renderDashboard==='function') window.renderDashboard();
   };
   window.getMocheMode=function(){return localStorage.getItem('mocheMode')||'worker';};
