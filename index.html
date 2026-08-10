@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,7 +20,9 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 .toast.error{background:var(--danger)}.toast.success{background:var(--green)}
 .badge.completed{background:#eef2f7;color:#465160}
 .badge.declined{background:#fdeceb;color:#c0392b}.badge.cancelled{background:#fdeceb;color:#c0392b}
+.badge.waiting{background:#fff4e0;color:#a15c00}.badge.in_progress{background:#e6f4ff;color:#0a6bb8}.badge.incomplete{background:#fdeceb;color:#c0392b}
 .btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.ghost.small.active{background:var(--soft);color:var(--accent-dark);border-color:var(--accent)}
 .chat-messages{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px;margin-bottom:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfc}
 .chat-msg{display:flex;flex-direction:column;max-width:78%}
 .chat-msg.mine{align-self:flex-end;align-items:flex-end}
@@ -265,6 +266,7 @@ async function loadData(){
   state.jobs=(jr.data||[]).map(j=>({
     id:j.id,title:j.title,category:j.category,description:j.description,
     location:j.location,date:j.scheduled_at,price:j.price,status:j.status,
+    progress:j.progress_status||'waiting',
     customerId:j.customer_id,customer:getUser(j.customer_id)?.name||'Customer',
     hiredWorkerId:null,hiredWorker:null,finalPrice:null,
     offers:offers.filter(o=>o.job_id===j.id).map(o=>({
@@ -581,14 +583,19 @@ function openJob(id){
     body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${mine.status==='pending'?`<button class="btn ghost small danger" onclick="withdrawOffer('${j.id}','${mine.id}')">Withdraw offer</button>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button></div>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
   }
   if((j.status==='hired'||j.status==='completed')&&hiredOffer){
+    const progressPill=j.status==='hired'?`<div style="margin-top:10px"><span class="badge ${j.progress}">${esc(progressLabel(j.progress))}</span><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn ghost small${j.progress==='waiting'?' active':''}" onclick="setProgress('${j.id}','waiting')">Waiting</button>
+      <button class="btn ghost small${j.progress==='in_progress'?' active':''}" onclick="setProgress('${j.id}','in_progress')">In progress</button>
+      <button class="btn ghost small${j.progress==='incomplete'?' active':''}" onclick="setProgress('${j.id}','incomplete')">Flag incomplete</button>
+    </div></div>`:'';
     if(j.customerId===u.id){
       const worker=getUser(hiredOffer.workerId)||{name:hiredOffer.worker,rating:5,bio:''};
-      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}${progressPill}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message ${esc(worker.name||'worker')}</button>
         ${j.status==='hired'?`<button class="btn primary small" onclick="markComplete('${j.id}')">Mark job complete</button>`:''}
       </div></div>`;
     }else if(hiredOffer.workerId===u.id){
-      body+=`<div class="notice" style="margin-top:12px">You're hired for this job at ${money(hiredOffer.price)}.</div><button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`;
+      body+=`<div class="notice" style="margin-top:12px">You're hired for this job at ${money(hiredOffer.price)}.</div>${progressPill}<button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`;
     }else{
       body+=`<div class="notice" style="margin-top:12px">This job has been filled.</div>`;
     }
@@ -777,10 +784,19 @@ function cancelJob(jobId){
   if(!isCustomer&&!isHiredWorker)return;
   const warn=j.status==='hired'?'<div class="notice" style="margin-bottom:10px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':'';
   showConfirm('Cancel this job?',warn+'<div class="notice">This removes the job from active work. The other person will be notified.</div>',async()=>{
-    const {error}=await supabaseClient.from('jobs').update({status:'cancelled'}).eq('id',jobId);
+    const {error}=await supabaseClient.from('jobs').update({status:'cancelled',cancelled_by:u.id}).eq('id',jobId);
     if(error){toast(error.message,'error');return}
     await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
   },'Cancel job');
+}
+function progressLabel(p){
+  return p==='in_progress'?'In progress':p==='incomplete'?'Flagged incomplete':'Waiting to start';
+}
+async function setProgress(jobId,val){
+  const u=current();if(!u)return;
+  const {error}=await supabaseClient.from('jobs').update({progress_status:val,progress_updated_by:u.id}).eq('id',jobId);
+  if(error){toast(error.message,'error');return}
+  await loadData();openJob(jobId);toast('Status updated','success');
 }
 
 async function initMoche(){
