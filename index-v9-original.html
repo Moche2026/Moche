@@ -18,6 +18,15 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 .appmain{padding:38px 0 70px}.appgrid{display:grid;grid-template-columns:1.3fr .7fr;gap:20px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px}.panel h2,.panel h3{margin:0 0 7px}.muted{color:var(--muted)}.toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}.toolbar h1{font-size:34px;margin:0;line-height:1}.form{display:grid;gap:14px}.field{display:grid;gap:6px}.field label{font-weight:800;font-size:13px}.field input,.field textarea,.field select{width:100%;border:1px solid #dfe3ea;border-radius:11px;padding:12px 13px;background:#fff;outline:none}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}textarea{min-height:110px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.joblist{display:grid;gap:12px}.job{border:1px solid var(--line);border-radius:16px;padding:17px}.jobtop{display:flex;justify-content:space-between;gap:15px}.job h3{margin:0 0 4px}.jobmeta{font-size:13px;color:var(--muted);margin:4px 0 12px}.jobdesc{font-size:14px;color:#4b5563;margin:0 0 13px}.jobfooter{display:flex;justify-content:space-between;align-items:center;gap:10px}.jobprice{font-size:18px;font-weight:900}.badge{font-size:12px;font-weight:800;padding:5px 8px;border-radius:999px;background:#f1f2f5}.badge.open{background:#eafaf4;color:#087a54}.badge.hired{background:#efedff;color:#5144d8}.badge.done{background:#eef2f7;color:#465160}.offerrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:13px 0}.offerrow:first-child{border-top:0}.offerperson{display:flex;gap:10px;align-items:center}.offeractions{display:flex;gap:7px}.empty{padding:28px;text-align:center;border:1px dashed #d9dde5;border-radius:15px;color:var(--muted)}.profile-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}.profile-head{display:flex;gap:12px;align-items:center}.avatar.big{width:48px;height:48px;font-size:17px}.rating{font-weight:850;font-size:13px;margin-top:2px}.profile-card p{margin:11px 0 0;color:#596274;font-size:13px;line-height:1.55}.offer-bio{margin:9px 0 5px 45px;color:#596274;font-size:13px;line-height:1.45}.offer-note{margin-left:45px;font-size:13px}.notice{padding:11px 13px;border-radius:11px;background:#f4f7ff;color:#43506a;font-size:13px}.toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:#fff;padding:13px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:99}.danger{color:var(--danger)}.success{color:var(--green)}.modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:grid;place-items:center;padding:20px;z-index:50}.modalbox{background:#fff;border-radius:22px;max-width:520px;width:100%;padding:24px;box-shadow:var(--shadow)}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.close{border:0;background:#f1f2f5;border-radius:50%;width:34px;height:34px;font-size:18px}
 @media(max-width:820px){nav a:not(.nav-cta){display:none}.hero{padding-top:55px}.hero-grid,.appgrid{grid-template-columns:1fr}.steps,.categories,.features{grid-template-columns:1fr}.cta{padding:36px 26px;display:block}.cta .buttons{margin-top:24px}.section-head h2,.cta h2{font-size:34px}.two{grid-template-columns:1fr}.appbar-inner{align-items:flex-start;padding-top:12px;padding-bottom:12px;flex-direction:column}}
 </style>
+
+<style id="moche-role-toggle-css">
+.moche-role-toggle{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid rgba(127,127,127,.25);border-radius:999px;background:rgba(127,127,127,.08);width:max-content;margin:0 0 14px}
+.moche-role-label{font-size:.8rem;opacity:.7;padding:0 5px}
+.moche-role-btn{border:0;border-radius:999px;padding:7px 12px;cursor:pointer;background:transparent;color:inherit}
+.moche-role-btn.active{background:currentColor;color:CanvasText}
+@media(max-width:650px){.moche-role-toggle{width:100%;justify-content:center}.moche-role-btn{flex:1}}
+</style>
+
 </head>
 <body>
 <header id="siteHeader">
@@ -94,6 +103,13 @@ function switchView(view){
 }
 
 function renderDashboard(){const u=current();const mine=state.jobs.filter(j=>j.customerId===u.id);const hired=state.jobs.filter(j=>j.offers.some(o=>o.workerId===u.id));document.getElementById('view').innerHTML=u.role==='customer'?`
+
+<div id="moche-role-toggle" class="moche-role-toggle" aria-label="Moche mode">
+  <span class="moche-role-label">Mode</span>
+  <button type="button" id="moche-worker-mode" class="moche-role-btn" onclick="setMocheMode('worker')">Worker</button>
+  <button type="button" id="moche-poster-mode" class="moche-role-btn" onclick="setMocheMode('poster')">Post Jobs</button>
+</div>
+
 <div class="toolbar"><div><h1>Your dashboard</h1><div class="muted">Manage jobs and compare worker offers.</div></div><button class="btn primary" onclick="switchView('post')">+ Post a job</button></div>
 <div class="appgrid"><div class="panel"><h2>Your jobs</h2><p class="muted">Jobs you've posted.</p><div class="joblist">${mine.length?mine.map(jobCard).join(''):'<div class="empty">You have not posted a job yet.</div>'}</div></div>
 <div class="panel"><h2>How it works</h2><p class="muted">Your next move:</p><div class="notice">1. Post a job with your starting price.</div><br><div class="notice">2. Workers send offers.</div><br><div class="notice">3. Pick an offer and hire them.</div></div></div>`:
@@ -116,5 +132,31 @@ function hire(jobId,offerId){const j=state.jobs.find(x=>x.id===jobId),o=j.offers
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal()}})
 showLanding();
 </script>
+
+<script id="moche-role-toggle-js">
+(function(){
+  window.setMocheMode=function(mode){
+    localStorage.setItem('mocheMode', mode);
+    window.mocheMode=mode;
+    document.documentElement.setAttribute('data-moche-mode', mode);
+    document.querySelectorAll('.moche-role-btn').forEach(function(b){b.classList.remove('active')});
+    var active=document.getElementById(mode==='worker'?'moche-worker-mode':'moche-poster-mode');
+    if(active) active.classList.add('active');
+    if(typeof window.switchView==='function') window.switchView(mode==='worker'?'browse':'post');
+    else if(typeof window.renderDashboard==='function') window.renderDashboard();
+  };
+  window.getMocheMode=function(){return localStorage.getItem('mocheMode')||'worker';};
+  function initMocheMode(){
+    var mode=window.getMocheMode();
+    window.mocheMode=mode;
+    document.documentElement.setAttribute('data-moche-mode', mode);
+    var active=document.getElementById(mode==='worker'?'moche-worker-mode':'moche-poster-mode');
+    if(active) active.classList.add('active');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initMocheMode);
+  else initMocheMode();
+})();
+</script>
+
 </body>
 </html>
