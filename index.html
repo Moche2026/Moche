@@ -101,7 +101,9 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 </div>
 
 <div id="app" class="hidden">
-<div class="appbar"><div class="wrap appbar-inner"><div class="appnav"><button type="button" class="tab active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button><button type="button" class="tab" data-view="browse" onclick="switchView('browse')">Browse jobs</button><button type="button" class="tab" data-view="post" onclick="switchView('post')">Post a job</button></div><div><span id="userChip" class="user-chip"></span> <button class="btn ghost small" onclick="logout()">Log out</button></div></div></div>
+<div class="appbar"><div class="wrap appbar-inner"><div class="appnav"><button type="button" class="tab active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button><button type="button" class="tab" data-view="browse" onclick="switchView('browse')">Browse jobs</button><button type="button" class="tab" data-view="post" onclick="switchView('post')">Post a job</button></div><div style="display:flex;align-items:center;gap:8px"><button type="button" class="btn ghost small" id="notifBtn" onclick="toggleNotifPanel()" style="position:relative">🔔<span id="notifBadge" class="hidden" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:2px 5px;font-weight:800;line-height:1"></span></button><span id="userChip" class="user-chip"></span> <button class="btn ghost small" onclick="logout()">Log out</button></div></div>
+<div id="notifPanel" class="hidden" style="position:fixed;top:70px;right:24px;width:320px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:60;padding:12px"></div>
+</div>
 <main class="appmain"><div class="wrap" id="view"></div></main>
 </div>
 
@@ -297,6 +299,8 @@ async function finishAuth(user){
 }
 async function logout(){
   await supabaseClient.auth.signOut();
+  unsubscribeNotifs();
+  notifications=[];
   state={jobs:[],users:[],session:null};
   showLanding();
   toast('Logged out');
@@ -307,7 +311,73 @@ function showApp(){
   document.getElementById('app').classList.remove('hidden');
   const u=current();
   document.getElementById('userChip').textContent=(u?.name||'User')+' · '+(u?.role==='worker'?'Worker':'Customer');
+  loadNotifications();
+  subscribeNotifs();
 }
+
+/* ---------- Notifications ---------- */
+let notifications=[], notifSub=null;
+async function loadNotifications(){
+  const u=current();if(!u)return;
+  const {data,error}=await supabaseClient.from('notifications').select('*').eq('user_id',u.id).order('created_at',{ascending:false}).limit(30);
+  if(error){console.error(error);return}
+  notifications=data||[];
+  updateNotifBadge();
+  if(!document.getElementById('notifPanel')?.classList.contains('hidden'))renderNotifPanel();
+}
+function updateNotifBadge(){
+  const unread=notifications.filter(n=>!n.read).length;
+  const badge=document.getElementById('notifBadge');
+  if(!badge)return;
+  if(unread>0){badge.textContent=unread>9?'9+':unread;badge.classList.remove('hidden')}
+  else badge.classList.add('hidden');
+}
+function toggleNotifPanel(){
+  const panel=document.getElementById('notifPanel');
+  if(!panel)return;
+  if(panel.classList.contains('hidden')){renderNotifPanel();panel.classList.remove('hidden')}
+  else panel.classList.add('hidden');
+}
+function renderNotifPanel(){
+  const panel=document.getElementById('notifPanel');if(!panel)return;
+  if(!notifications.length){panel.innerHTML='<div class="empty">No notifications yet.</div>';return}
+  panel.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>Notifications</strong><button class="btn ghost small" onclick="markAllNotifsRead()">Mark all read</button></div>`+
+    notifications.map(n=>`<div style="padding:9px;border-radius:10px;margin-bottom:4px;cursor:pointer;background:${n.read?'#fff':'#f4f7ff'}" onclick="openNotif('${n.id}','${n.job_id||''}')">
+      <div style="font-size:13px">${esc(n.body)}</div>
+      <div class="muted" style="font-size:11px;margin-top:2px">${esc(new Date(n.created_at).toLocaleString([], {hour:'2-digit',minute:'2-digit',month:'short',day:'numeric'}))}</div>
+    </div>`).join('');
+}
+async function markNotifRead(id){
+  await supabaseClient.from('notifications').update({read:true}).eq('id',id);
+  const n=notifications.find(x=>x.id===id);if(n)n.read=true;
+  updateNotifBadge();
+}
+async function markAllNotifsRead(){
+  const u=current();if(!u)return;
+  await supabaseClient.from('notifications').update({read:true}).eq('user_id',u.id).eq('read',false);
+  notifications.forEach(n=>n.read=true);
+  updateNotifBadge();renderNotifPanel();
+}
+function openNotif(id,jobId){
+  markNotifRead(id);
+  document.getElementById('notifPanel')?.classList.add('hidden');
+  if(jobId)openJob(jobId);
+}
+function subscribeNotifs(){
+  const u=current();if(!u||notifSub)return;
+  notifSub=supabaseClient.channel('notifs-'+u.id)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:`user_id=eq.${u.id}`},payload=>{
+      notifications.unshift(payload.new);
+      updateNotifBadge();
+      if(!document.getElementById('notifPanel')?.classList.contains('hidden'))renderNotifPanel();
+      toast(payload.new.body);
+    })
+    .subscribe();
+}
+function unsubscribeNotifs(){
+  if(notifSub){supabaseClient.removeChannel(notifSub);notifSub=null}
+}
+
 function switchView(view){
   const u=current();
   if(!u){openAuth();return false}
@@ -440,9 +510,13 @@ function jobCard(j){
   const u=current(),customer=getUser(j.customerId)||{name:j.customer||'Customer',rating:5,bio:'No profile description yet.'};
   const mine=(j.offers||[]).filter(o=>o.workerId===u.id);
   const canOffer=j.status==='open'&&j.customerId!==u.id&&!mine.length;
+  const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  let messageBtn='';
+  if(j.customerId===u.id&&hiredOffer)messageBtn=`<button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message</button>`;
+  else if(mine.length)messageBtn=`<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message</button>`;
   return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div><div class="jobprice">${money(j.price)}</div><span class="badge ${j.status}">${esc(j.status)}</span></div></div>
   <div style="margin:10px 0">${profileCard(customer,'Customer who posted this job')}</div><p class="jobdesc">${esc(j.description)}</p>
-  <div class="jobfooter"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span>${canOffer?`<button class="btn primary small" onclick="openJob('${j.id}')">View & make offer</button>`:`<button class="btn ghost small" onclick="openJob('${j.id}')">View</button>`}</div>
+  <div class="jobfooter"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span><div style="display:flex;gap:8px;flex-wrap:wrap">${messageBtn}${canOffer?`<button class="btn primary small" onclick="openJob('${j.id}')">View & make offer</button>`:`<button class="btn ghost small" onclick="openJob('${j.id}')">View</button>`}</div></div>
   ${j.customerId===u.id?offerList(j):''}${mine.length?`<div class="notice" style="margin-top:10px">Your offer: ${money(mine[0].price)} · ${mine[0].status}</div>`:''}</article>`;
 }
 function offerList(j){
@@ -729,7 +803,7 @@ supabaseClient.auth.onAuthStateChange((event,session)=>{
   }
 });
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAuth();closeJobModal();document.getElementById('notifPanel')?.classList.add('hidden')}});
 function handleAuthRedirectError(){
   const raw=(window.location.hash||'').replace(/^#/,'')||(window.location.search||'').replace(/^\?/,'');
   if(!raw||!raw.includes('error'))return;
