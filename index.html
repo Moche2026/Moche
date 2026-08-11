@@ -239,7 +239,22 @@ async function forgotPassword(){
 }
 function current(){return state.users.find(u=>u.id===state.session)}
 function getUser(id){return state.users.find(x=>x.id===id)}
-function profileCard(user,label='Profile'){user=user||{};return `<div class="profile-card"><div class="profile-head"><div class="avatar big">${esc((user.name||'?').charAt(0))}</div><div><strong>${esc(user.name||'Moche member')}</strong><div class="rating">★ ${Number(user.rating||5).toFixed(1)} <span class="muted">· ${esc(label)}</span></div></div></div><p>${esc(user.bio||'No profile description yet.')}</p></div>`}
+function profileCard(user,label='Profile',userId){user=user||{};const id=userId||user.id;const count=user.review_count||user.rating_count||0;return `<div class="profile-card"><div class="profile-head"><div class="avatar big">${esc((user.name||'?').charAt(0))}</div><div><strong>${esc(user.name||'Moche member')}</strong><div class="rating">★ ${Number(user.rating||0).toFixed(1)} <span class="muted">· ${esc(label)}</span></div></div></div><p>${esc(user.bio||'No profile description yet.')}</p>${id?`<button type="button" class="btn ghost small" style="margin-top:10px" onclick="viewReviews('${id}','${esc(user.name||'this person')}')">See ${count} review${count===1?'':'s'}</button>`:''}</div>`}
+async function viewReviews(userId,name){
+  document.getElementById('jobModalTitle').textContent='Reviews · '+name;
+  document.getElementById('jobModalMeta').textContent='';
+  document.getElementById('jobModalBody').innerHTML='<div class="muted">Loading…</div>';
+  document.getElementById('jobModal').classList.remove('hidden');
+  const {data,error}=await supabaseClient.from('reviews').select('*').eq('reviewed_id',userId).order('created_at',{ascending:false});
+  if(!document.getElementById('jobModalBody'))return;
+  if(error){document.getElementById('jobModalBody').innerHTML='<div class="empty">Could not load reviews.</div>';return}
+  const reviews=data||[];
+  if(!reviews.length){document.getElementById('jobModalBody').innerHTML='<div class="empty">No reviews yet.</div>';return}
+  document.getElementById('jobModalBody').innerHTML=reviews.map(r=>{
+    const reviewer=getUser(r.reviewer_id);
+    return `<div class="profile-card" style="margin-bottom:10px"><strong>${esc(reviewer?.name||'A Moche member')}</strong><div class="rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div><p>${esc(r.review||'No comment left.')}</p><div class="muted" style="font-size:11px;margin-top:4px">${esc(new Date(r.created_at).toLocaleDateString([], {month:'short',day:'numeric',year:'numeric'}))}</div></div>`;
+  }).join('');
+}
 
 async function ensureProfile(user,name,role){
   const {data:existing,error:readError}=await supabaseClient.from('profiles').select('id,role').eq('id',user.id).maybeSingle();
@@ -479,7 +494,7 @@ function profilePanelHtml(u){
   return `<div class="panel">
     <h2>Your profile</h2>
     <div id="profileView">
-      ${profileCard(u,u.role==='worker'?'Worker':'Customer')}
+      ${profileCard(u,u.role==='worker'?'Worker':'Customer',u.id)}
       <button class="btn ghost small" style="margin-top:10px" onclick="toggleEditProfile(true)">Edit profile</button>
     </div>
     <form class="form hidden" id="profileEditForm" onsubmit="saveProfile(event)" style="margin-top:10px">
@@ -625,7 +640,7 @@ function jobCard(j){
   else if(mine.length)messageBtn=`<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message</button>`;
   const lifecycle=(j.status==='completed'||j.status==='cancelled')?`<span class="muted" style="font-size:11px;margin-left:5px">${esc(lifecycleLabel(j.status))}</span>`:'';
   return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div style="text-align:right"><div class="jobprice">${money(j.price)}</div><span class="badge ${status.cls}">${esc(status.label)}</span>${lifecycle}</div></div>
-  <div style="margin:10px 0">${profileCard(customer,'Customer who posted this job')}</div><p class="jobdesc">${esc(j.description)}</p>
+  <div style="margin:10px 0">${profileCard(customer,'Customer who posted this job',j.customerId)}</div><p class="jobdesc">${esc(j.description)}</p>
   <div class="jobfooter"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span><div style="display:flex;gap:8px;flex-wrap:wrap">${messageBtn}${canOffer?`<button class="btn primary small" onclick="openJob('${j.id}')">View & make offer</button>`:`<button class="btn ghost small" onclick="openJob('${j.id}')">View</button>`}</div></div>
   ${j.customerId===u.id&&j.status!=='completed'&&j.status!=='cancelled'?offerList(j):''}${mine.length?`<div class="notice" style="margin-top:10px">Your offer: ${money(mine[0].price)} · ${esc(mine[0].status)}</div>`:''}</article>`;
 }
@@ -655,7 +670,8 @@ function offerList(j){
   if(!j.offers.length)return '<div class="empty" style="margin-top:12px">No offers yet.</div>';
   return '<div style="margin-top:10px">'+j.offers.map(o=>{
     const worker=getUser(o.workerId)||{name:o.worker,rating:o.rating,bio:o.bio};
-    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||5).toFixed(1)} <span class="muted">· Worker</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong>${o.status!=='pending'?`<span class="badge ${esc(o.status)}">${esc(o.status)}</span>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn ghost small danger" onclick="declineOffer('${j.id}','${o.id}')">Decline</button><button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
+    const count=worker.review_count||worker.rating_count||0;
+    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||0).toFixed(1)} <span class="muted">· Worker</span> <span class="muted" style="cursor:pointer;text-decoration:underline" onclick="viewReviews('${o.workerId}','${esc(worker.name||o.worker||'this worker')}')">See ${count} review${count===1?'':'s'}</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong>${o.status!=='pending'?`<span class="badge ${esc(o.status)}">${esc(o.status)}</span>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn ghost small danger" onclick="declineOffer('${j.id}','${o.id}')">Decline</button><button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
   }).join('')+'</div>';
 }
 let browseFilter='';
@@ -707,7 +723,7 @@ function openJob(id){
   document.getElementById('jobModalTitle').textContent=j.title;
   document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
   let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> <span class="badge ${status.cls}">${esc(status.label)}</span><br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
-  if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer')}</div>`;
+  if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer',j.customerId)}</div>`;
   const canCancel=(j.status==='open'||j.status==='hired')&&(j.customerId===u.id||(hiredOffer&&hiredOffer.workerId===u.id));
   if(canCancel)body+=`<div style="margin-top:12px">${j.status==='hired'?'<div class="notice" style="margin-bottom:8px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':''}<button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
   if(j.status==='open'&&j.customerId!==u.id){
@@ -723,7 +739,7 @@ function openJob(id){
         <button class="btn ghost small${j.progress==='in_progress'?' active':''}" onclick="setProgress('${j.id}','in_progress')">In Progress</button>
         <button class="btn ghost small${j.progress==='incomplete'?' active':''}" onclick="setProgress('${j.id}','incomplete')">Flag Incomplete</button>
       </div>`:'';
-      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}${progressPill}${controls}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker',hiredOffer.workerId)}${progressPill}${controls}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message ${esc(worker.name||'worker')}</button>
         ${j.status==='hired'?`<button class="btn primary small" onclick="markComplete('${j.id}')">Mark job complete</button>`:''}
       </div></div>`;
@@ -880,7 +896,7 @@ async function makeOffer(e,id){
   if(j.offers.some(o=>o.workerId===u.id)){toast('You already made an offer');return}
   const price=Number(document.getElementById('offerPrice').value),note=cleanText(document.getElementById('offerNote').value);
   if(!price||!note){toast('Add an offer amount and a short message.');return}
-  showConfirm('Confirm your offer',`<div class="notice" style="margin-bottom:14px">Check the customer, job, price, and your message before sending.</div><div class="form"><div><strong>Customer</strong><br>${esc(j.customer)}</div>${profileCard(getUser(j.customerId)||{name:j.customer,rating:5,bio:''},'Customer')}<div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>When / Where</strong><br>${esc(j.date)} · ${esc(j.location)}</div><div><strong>Your offer</strong><br>${money(price)}</div><div><strong>Your message</strong><br>${esc(note)}</div></div>`,async()=>{
+  showConfirm('Confirm your offer',`<div class="notice" style="margin-bottom:14px">Check the customer, job, price, and your message before sending.</div><div class="form"><div><strong>Customer</strong><br>${esc(j.customer)}</div>${profileCard(getUser(j.customerId)||{name:j.customer,rating:5,bio:''},'Customer',j.customerId)}<div><strong>Job</strong><br>${esc(j.title)}</div><div><strong>When / Where</strong><br>${esc(j.date)} · ${esc(j.location)}</div><div><strong>Your offer</strong><br>${money(price)}</div><div><strong>Your message</strong><br>${esc(note)}</div></div>`,async()=>{
     const {error}=await supabaseClient.from('offers').insert({job_id:j.id,worker_id:u.id,price,message:note,status:'pending'});
     if(error){toast(error.message,'error');return}
     await loadData();closeJobModal();toast('Offer sent to '+j.customer+'!','success');switchView('browse');
