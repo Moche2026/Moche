@@ -124,6 +124,7 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 </form>
 </div></div>
 <div id="jobModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0" id="jobModalTitle">Job</h2><div class="muted" id="jobModalMeta"></div></div><button class="close" onclick="closeJobModal()">×</button></div><div id="jobModalBody"></div></div></div>
+<div id="mandatoryReviewModal" class="modal hidden"><div class="modalbox"><div class="modalhead"><div><h2 style="margin:0">Rate your experience</h2><div class="muted" id="mandatoryReviewMeta"></div></div></div><div id="mandatoryReviewBody"></div></div></div>
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -132,7 +133,7 @@ const SUPABASE_URL='https://pwodchiqrkcyzzfooagr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_F1uWl8QdJIvIue7zP4zl1Q_2mvZVrC0';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});
 
-let state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
+let state={jobs:[],users:[],session:null,archivedJobIds:new Set(),myReviewedJobIds:new Set()};
 let pendingProfile=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -253,18 +254,21 @@ async function loadData(){
   const {data:{session}}=await supabaseClient.auth.getSession();
   state.session=session?.user?.id||null;
   if(!state.session){state.users=[];state.jobs=[];return}
-  const [pr,jr,or,ar]=await Promise.all([
+  const [pr,jr,or,ar,rr]=await Promise.all([
     supabaseClient.from('profiles').select('*'),
     supabaseClient.from('jobs').select('*').order('created_at',{ascending:false}),
     supabaseClient.from('offers').select('*').order('created_at',{ascending:true}),
-    supabaseClient.from('job_archives').select('job_id').eq('user_id',state.session)
+    supabaseClient.from('job_archives').select('job_id').eq('user_id',state.session),
+    supabaseClient.from('reviews').select('job_id').eq('reviewer_id',state.session)
   ]);
   if(pr.error)throw pr.error;
   if(jr.error)throw jr.error;
   if(or.error)throw or.error;
   if(ar.error)throw ar.error;
+  if(rr.error)throw rr.error;
   state.users=pr.data||[];
   state.archivedJobIds=new Set((ar.data||[]).map(x=>x.job_id));
+  state.myReviewedJobIds=new Set((rr.data||[]).map(x=>x.job_id));
   const offers=or.data||[];
   state.jobs=(jr.data||[]).map(j=>({
     id:j.id,title:j.title,category:j.category,description:j.description,
@@ -306,7 +310,7 @@ async function logout(){
   await supabaseClient.auth.signOut();
   unsubscribeNotifs();
   notifications=[];
-  state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
+  state={jobs:[],users:[],session:null,archivedJobIds:new Set(),myReviewedJobIds:new Set()};
   showLanding();
   toast('Logged out');
 }
@@ -318,6 +322,69 @@ function showApp(){
   document.getElementById('userChip').textContent=(u?.name||'User')+' · '+(u?.role==='worker'?'Worker':'Customer');
   loadNotifications();
   subscribeNotifs();
+  checkPendingReviews();
+}
+
+/* ---------- Mandatory post-completion reviews ---------- */
+let reviewQueue=[];
+function pendingReviewJobs(){
+  const u=current();if(!u)return[];
+  return state.jobs.filter(j=>{
+    if(j.status!=='completed')return false;
+    if(state.myReviewedJobIds.has(j.id))return false;
+    const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+    const isCustomer=j.customerId===u.id;
+    const isWorker=hiredOffer&&hiredOffer.workerId===u.id;
+    return isCustomer||isWorker;
+  });
+}
+function checkPendingReviews(){
+  reviewQueue=pendingReviewJobs().map(j=>j.id);
+  if(reviewQueue.length)openMandatoryReview(reviewQueue[0]);
+  else document.getElementById('mandatoryReviewModal').classList.add('hidden');
+}
+function openMandatoryReview(jobId){
+  const j=state.jobs.find(x=>x.id===jobId),u=current();if(!j||!u)return;
+  const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  const isCustomer=j.customerId===u.id;
+  const otherId=isCustomer?hiredOffer?.workerId:j.customerId;
+  const otherName=isCustomer?(getUser(otherId)?.name||hiredOffer?.worker||'Worker'):(getUser(otherId)?.name||j.customer||'Customer');
+  if(!otherId){reviewQueue.shift();checkPendingReviews();return}
+  document.getElementById('mandatoryReviewMeta').textContent=j.title;
+  document.getElementById('mandatoryReviewBody').innerHTML=`
+    <div class="notice" style="margin-bottom:14px">Rate ${esc(otherName)} for "${esc(j.title)}" to continue using Moche. This only takes a moment.</div>
+    <form class="form" id="mandatoryReviewForm" onsubmit="submitMandatoryReview(event,'${j.id}','${otherId}')">
+      <div class="field"><label>Rate ${esc(otherName)}</label>
+        <select id="mandatoryReviewRating" required>
+          <option value="">Choose a rating</option>
+          <option value="5">★★★★★ Excellent</option>
+          <option value="4">★★★★ Good</option>
+          <option value="3">★★★ Okay</option>
+          <option value="2">★★ Not great</option>
+          <option value="1">★ Poor</option>
+        </select>
+      </div>
+      <div class="field"><label>Comment (optional)</label><textarea id="mandatoryReviewComment" placeholder="How did it go?"></textarea></div>
+      <button class="btn primary" type="submit">Submit review</button>
+    </form>`;
+  document.getElementById('mandatoryReviewModal').classList.remove('hidden');
+}
+async function submitMandatoryReview(e,jobId,revieweeId){
+  e.preventDefault();
+  const rating=Number(document.getElementById('mandatoryReviewRating').value);
+  const comment=cleanText(document.getElementById('mandatoryReviewComment').value)||'No comment left.';
+  if(!rating){toast('Please choose a rating.');return}
+  const btn=e.target.querySelector('button[type=submit]');
+  busy(btn,'Submitting…');
+  const {error}=await supabaseClient.rpc('submit_job_review',{
+    p_job_id:jobId,p_reviewed_id:revieweeId,p_rating:rating,p_review:comment
+  });
+  if(error){unbusy(btn);toast(error.message,'error');return}
+  state.myReviewedJobIds.add(jobId);
+  reviewQueue.shift();
+  toast('Review submitted!','success');
+  if(reviewQueue.length)openMandatoryReview(reviewQueue[0]);
+  else document.getElementById('mandatoryReviewModal').classList.add('hidden');
 }
 
 /* ---------- Notifications ---------- */
@@ -753,7 +820,7 @@ async function markComplete(jobId){
   showConfirm('Mark this job as complete?','<div class="notice">Only confirm once the work is actually finished. This moves the job into History and lets both sides leave a review.</div>',async()=>{
     const {error}=await supabaseClient.rpc('complete_job',{p_job_id:jobId});
     if(error){toast(error.message||'Could not complete the job.','error');return}
-    await loadData();closeJobModal();toast('Job completed and moved to History.','success');switchView('dashboard');
+    await loadData();closeJobModal();toast('Job completed and moved to History.','success');switchView('dashboard');checkPendingReviews();
   },'Mark complete');
 }
 async function loadReviewSection(j,u,hiredOffer){
@@ -906,7 +973,7 @@ supabaseClient.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{try{await finishAuth(session.user)}catch(err){console.error(err)}},0);
   }
   if(event==='SIGNED_OUT'){
-    state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
+    state={jobs:[],users:[],session:null,archivedJobIds:new Set(),myReviewedJobIds:new Set()};
     showLanding();
   }
 });
