@@ -21,7 +21,7 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 .toast.error{background:var(--danger)}.toast.success{background:var(--green)}
 .badge.completed{background:#eef2f7;color:#465160}
 .badge.declined{background:#fdeceb;color:#c0392b}.badge.cancelled{background:#fdeceb;color:#c0392b}
-.badge.waiting{background:#fff4e0;color:#a15c00}.badge.in_progress{background:#e6f4ff;color:#0a6bb8}.badge.incomplete{background:#fdeceb;color:#c0392b}
+.badge.waiting{background:#fff4e0;color:#a15c00}.badge.in_progress{background:#e6f4ff;color:#0a6bb8}.badge.incomplete{background:#fdeceb;color:#c0392b}.badge.completed{background:#eef2f7;color:#465160}.badge.cancelled{background:#fdeceb;color:#c0392b}
 .btn.danger{border-color:var(--danger);color:var(--danger)}
 .btn.ghost.small.active{background:var(--soft);color:var(--accent-dark);border-color:var(--accent)}
 .chat-messages{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px;margin-bottom:12px;border:1px solid var(--line);border-radius:14px;background:#fafbfc}
@@ -103,7 +103,7 @@ section{padding:78px 0}.section-head{max-width:650px;margin-bottom:32px}.section
 </div>
 
 <div id="app" class="hidden">
-<div class="appbar"><div class="wrap appbar-inner"><div class="appnav"><button type="button" class="tab active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button><button type="button" class="tab" data-view="browse" onclick="switchView('browse')">Browse jobs</button><button type="button" class="tab" data-view="post" onclick="switchView('post')">Post a job</button></div><div style="display:flex;align-items:center;gap:8px"><button type="button" class="btn ghost small" id="notifBtn" onclick="toggleNotifPanel()" style="position:relative">🔔<span id="notifBadge" class="hidden" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:2px 5px;font-weight:800;line-height:1"></span></button><span id="userChip" class="user-chip"></span> <button class="btn ghost small" onclick="logout()">Log out</button></div></div>
+<div class="appbar"><div class="wrap appbar-inner"><div class="appnav"><button type="button" class="tab active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button><button type="button" class="tab" data-view="browse" onclick="switchView('browse')">Browse jobs</button><button type="button" class="tab" data-view="post" onclick="switchView('post')">Post a job</button><button type="button" class="tab" data-view="history" onclick="switchView('history')">History</button></div><div style="display:flex;align-items:center;gap:8px"><button type="button" class="btn ghost small" id="notifBtn" onclick="toggleNotifPanel()" style="position:relative">🔔<span id="notifBadge" class="hidden" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:2px 5px;font-weight:800;line-height:1"></span></button><span id="userChip" class="user-chip"></span> <button class="btn ghost small" onclick="logout()">Log out</button></div></div>
 <div id="notifPanel" class="hidden" style="position:fixed;top:70px;right:24px;width:320px;max-height:420px;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:60;padding:12px"></div>
 </div>
 <main class="appmain"><div class="wrap" id="view"></div></main>
@@ -133,7 +133,7 @@ const SUPABASE_URL='https://pwodchiqrkcyzzfooagr.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_F1uWl8QdJIvIue7zP4zl1Q_2mvZVrC0';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});
 
-let state={jobs:[],users:[],session:null};
+let state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
 let pendingProfile=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -254,15 +254,18 @@ async function loadData(){
   const {data:{session}}=await supabaseClient.auth.getSession();
   state.session=session?.user?.id||null;
   if(!state.session){state.users=[];state.jobs=[];return}
-  const [pr,jr,or]=await Promise.all([
+  const [pr,jr,or,ar]=await Promise.all([
     supabaseClient.from('profiles').select('*'),
     supabaseClient.from('jobs').select('*').order('created_at',{ascending:false}),
-    supabaseClient.from('offers').select('*').order('created_at',{ascending:true})
+    supabaseClient.from('offers').select('*').order('created_at',{ascending:true}),
+    supabaseClient.from('job_archives').select('job_id').eq('user_id',state.session)
   ]);
   if(pr.error)throw pr.error;
   if(jr.error)throw jr.error;
   if(or.error)throw or.error;
+  if(ar.error)throw ar.error;
   state.users=pr.data||[];
+  state.archivedJobIds=new Set((ar.data||[]).map(x=>x.job_id));
   const offers=or.data||[];
   state.jobs=(jr.data||[]).map(j=>({
     id:j.id,title:j.title,category:j.category,description:j.description,
@@ -304,7 +307,7 @@ async function logout(){
   await supabaseClient.auth.signOut();
   unsubscribeNotifs();
   notifications=[];
-  state={jobs:[],users:[],session:null};
+  state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
   showLanding();
   toast('Logged out');
 }
@@ -389,6 +392,7 @@ function switchView(view){
     if(view==='dashboard') renderModeDashboard();
     else if(view==='browse') renderBrowse();
     else if(view==='post') renderPost();
+    else if(view==='history') renderHistory();
     else if(view==='worker') renderWorkerDashboard();
   }catch(err){console.error(err);document.getElementById('view').innerHTML='<div class="panel"><h2>Page error</h2><p class="muted">'+esc(err.message||String(err))+'</p></div>'}
   window.scrollTo(0,0);return false;
@@ -414,9 +418,7 @@ function profilePanelHtml(u){
     </div>
     <form class="form hidden" id="profileEditForm" onsubmit="saveProfile(event)" style="margin-top:10px">
       <div class="field"><label>Your name</label><input id="editName" value="${esc(u.name||'')}" required></div>
-      <div class="field"><label>Bio</label><textarea id="editBio" style="min-height:90px" placeholder="Tell people about yourself.">${esc(u.bio||'')}</textarea></div>
-      <div class="field"><label>Skills</label><textarea id="editSkills" style="min-height:70px" placeholder="Moving, assembly, cleaning, tools, etc.">${esc(u.skills||'')}</textarea></div>
-      <div class="field"><label>Work history</label><textarea id="editWorkHistory" style="min-height:70px" placeholder="Relevant experience and past work.">${esc(u.work_history||'')}</textarea></div>
+      <div class="field"><label>Skills & experience</label><textarea id="editBio" style="min-height:90px" placeholder="What can you help with? Tools, experience, availability...">${esc(u.bio||'')}</textarea></div>
       <div style="display:flex;gap:8px"><button class="btn primary small" type="submit">Save</button><button class="btn ghost small" type="button" onclick="toggleEditProfile(false)">Cancel</button></div>
     </form>
     <div class="notice" style="margin-top:10px">Your account can both post jobs and work jobs. Keep your skills and experience description strong to build credibility.</div>
@@ -430,12 +432,10 @@ async function saveProfile(e){
   e.preventDefault();
   const name=cleanText(document.getElementById('editName').value);
   const bio=cleanText(document.getElementById('editBio').value);
-  const skills=cleanText(document.getElementById('editSkills')?.value);
-  const work_history=cleanText(document.getElementById('editWorkHistory')?.value);
   if(!name){toast('Please add your name.');return}
   const btn=e.target.querySelector('button[type=submit]');
   busy(btn,'Saving…');
-  const {error}=await supabaseClient.from('profiles').update({name,bio,skills,work_history}).eq('id',current().id);
+  const {error}=await supabaseClient.from('profiles').update({name,bio}).eq('id',current().id);
   unbusy(btn);
   if(error){toast(error.message,'error');return}
   await loadData();toast('Profile updated!','success');switchView('dashboard');
@@ -444,9 +444,13 @@ function renderWorkerDashboard(){
   const u=current();
   if(!u)return;
   const hired=state.jobs.filter(j=>
+    !state.archivedJobIds.has(j.id) &&
+    !['completed','cancelled'].includes((j.status||'').toLowerCase()) &&
     (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted')
   );
   const myOffers=state.jobs.filter(j=>
+    !state.archivedJobIds.has(j.id) &&
+    !['completed','cancelled'].includes((j.status||'').toLowerCase()) &&
     (j.offers||[]).some(o=>o.workerId===u.id)
   );
   document.getElementById('view').innerHTML=`
@@ -482,11 +486,21 @@ function renderDashboard(){renderModeDashboard();}
 function renderPosterDashboard(){
   const u=current();
   if(!u)return;
-  const posted=state.jobs.filter(j=>j.customerId===u.id);
+  const posted=state.jobs.filter(j=>
+    j.customerId===u.id &&
+    !state.archivedJobIds.has(j.id) &&
+    !['completed','cancelled'].includes((j.status||'').toLowerCase())
+  );
   const working=state.jobs.filter(j=>
+    !state.archivedJobIds.has(j.id) &&
+    !['completed','cancelled'].includes((j.status||'').toLowerCase()) &&
     (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted')
   );
-  const myOffers=state.jobs.filter(j=>(j.offers||[]).some(o=>o.workerId===u.id));
+  const myOffers=state.jobs.filter(j=>
+    !state.archivedJobIds.has(j.id) &&
+    !['completed','cancelled'].includes((j.status||'').toLowerCase()) &&
+    (j.offers||[]).some(o=>o.workerId===u.id)
+  );
   document.getElementById('view').innerHTML=`
   ${modeToggleHtml()}
 <div class="toolbar">
@@ -513,25 +527,63 @@ function renderPosterDashboard(){
     ${profilePanelHtml(u)}
   </div>`;
 }
+function lifecycleLabel(status){
+  const s=(status||'').toLowerCase();
+  return s==='open'?'Open':s==='hired'?'Hired':s==='completed'?'Completed':s==='cancelled'?'Canceled':status||'Unknown';
+}
+function progressLabel(p){
+  return p==='in_progress'?'In Progress':p==='incomplete'?'Flagged Incomplete':'Waiting';
+}
+function progressClass(p){
+  return p==='in_progress'?'in_progress':p==='incomplete'?'incomplete':'waiting';
+}
+function visibleJobStatus(j){
+  const s=(j.status||'').toLowerCase();
+  if(s==='completed')return {label:'Completed',cls:'completed'};
+  if(s==='cancelled')return {label:'Canceled',cls:'cancelled'};
+  if(s==='hired'){
+    if(j.progress==='in_progress')return {label:'In Progress',cls:'in_progress'};
+    if(j.progress==='incomplete')return {label:'Flagged Incomplete',cls:'incomplete'};
+    return {label:'Hired',cls:'hired'};
+  }
+  return {label:'Waiting',cls:'waiting'};
+}
 function jobCard(j){
   const u=current(),customer=getUser(j.customerId)||{name:j.customer||'Customer',rating:5,bio:'No profile description yet.'};
   const mine=(j.offers||[]).filter(o=>o.workerId===u.id);
   const canOffer=j.status==='open'&&j.customerId!==u.id&&!mine.length;
   const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  const status=visibleJobStatus(j);
   let messageBtn='';
   if(j.customerId===u.id&&hiredOffer)messageBtn=`<button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message</button>`;
   else if(mine.length)messageBtn=`<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message</button>`;
-  return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div><div class="jobprice">${money(j.price)}</div><span class="badge ${j.status}">${esc(j.status)}</span></div></div>
+  const lifecycle=(j.status==='completed'||j.status==='cancelled')?`<span class="muted" style="font-size:11px;margin-left:5px">${esc(lifecycleLabel(j.status))}</span>`:'';
+  return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div style="text-align:right"><div class="jobprice">${money(j.price)}</div><span class="badge ${status.cls}">${esc(status.label)}</span>${lifecycle}</div></div>
   <div style="margin:10px 0">${profileCard(customer,'Customer who posted this job')}</div><p class="jobdesc">${esc(j.description)}</p>
   <div class="jobfooter"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span><div style="display:flex;gap:8px;flex-wrap:wrap">${messageBtn}${canOffer?`<button class="btn primary small" onclick="openJob('${j.id}')">View & make offer</button>`:`<button class="btn ghost small" onclick="openJob('${j.id}')">View</button>`}</div></div>
-  ${j.customerId===u.id?offerList(j):''}${mine.length?`<div class="notice" style="margin-top:10px">Your offer: ${money(mine[0].price)} · ${mine[0].status}</div>`:''}</article>`;
+  ${j.customerId===u.id&&j.status!=='completed'&&j.status!=='cancelled'?offerList(j):''}${mine.length?`<div class="notice" style="margin-top:10px">Your offer: ${money(mine[0].price)} · ${esc(mine[0].status)}</div>`:''}</article>`;
 }
-function offerList(j){
-  if(!j.offers.length)return '<div class="empty" style="margin-top:12px">No offers yet.</div>';
-  return '<div style="margin-top:10px">'+j.offers.map(o=>{
-    const worker=getUser(o.workerId)||{name:o.worker,rating:o.rating,bio:o.bio};
-    return `<div class="offerrow rich-offer"><div style="flex:1"><div class="offerperson"><div class="avatar">${esc((worker.name||'?')[0])}</div><div><strong>${esc(worker.name||o.worker)}</strong><div class="rating">★ ${Number(worker.rating||o.rating||5).toFixed(1)} <span class="muted">· Worker</span></div></div></div><p class="offer-bio"><strong>Skills & experience:</strong> ${esc(worker.bio||o.bio||'No skills description provided yet.')}</p><div class="muted offer-note">${esc(o.note||'No message added.')}</div></div><div class="offeractions"><strong style="align-self:center">${money(o.price)}</strong>${o.status!=='pending'?`<span class="badge ${esc(o.status)}">${esc(o.status)}</span>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${o.workerId}')">💬 Message</button>${j.status==='open'&&o.status==='pending'?`<button class="btn ghost small danger" onclick="declineOffer('${j.id}','${o.id}')">Decline</button><button class="btn primary small" onclick="hire('${j.id}','${o.id}')">Hire</button>`:''}</div></div>`;
-  }).join('')+'</div>';
+
+function renderHistory(){
+  const u=current();if(!u)return;
+  const history=state.jobs.filter(j=>{
+    if(state.archivedJobIds.has(j.id))return false;
+    const participant=j.customerId===u.id || (j.offers||[]).some(o=>o.workerId===u.id&&o.status==='accepted');
+    return participant && ['completed','cancelled'].includes((j.status||'').toLowerCase());
+  });
+  document.getElementById('view').innerHTML=`
+    <div class="toolbar"><div><h1>History</h1><div class="muted">Completed and canceled jobs are kept here so your active dashboard stays clean.</div></div></div>
+    <div class="joblist">
+      ${history.length?history.map(j=>historyCard(j,u)).join(''):'<div class="empty">No completed or canceled jobs in your history.</div>'}
+    </div>`;
+}
+function historyCard(j,u){
+  const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
+  const status=visibleJobStatus(j);
+  const otherName=j.customerId===u.id?(getUser(hiredOffer?.workerId)?.name||hiredOffer?.worker||'Worker'):(getUser(j.customerId)?.name||j.customer||'Customer');
+  return `<article class="job"><div class="jobtop"><div><h3>${esc(j.title)}</h3><div class="jobmeta">${esc(j.category)} · ${esc(j.location)} · ${esc(j.date)}</div></div><div style="text-align:right"><div class="jobprice">${money(j.price)}</div><span class="badge ${status.cls}">${esc(status.label)}</span></div></div>
+    <div class="notice" style="margin-top:10px">${j.status==='completed'?'Completed job':'Canceled job'} · ${j.customerId===u.id?'You posted this job':'You worked on this job'}${otherName?` · ${esc(otherName)}`:''}</div>
+    <div class="jobfooter" style="margin-top:12px"><span class="muted">${j.offers.length} offer${j.offers.length===1?'':'s'}</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost small" onclick="openJob('${j.id}')">View</button><button class="btn ghost small danger" onclick="removeFromHistory('${j.id}')">Remove from history</button></div></div></article>`;
 }
 let browseFilter='';
 function renderBrowse(){
@@ -578,88 +630,43 @@ function openJob(id){
   unsubscribeChat();currentChat=null;
   const customer=getUser(j.customerId)||{name:j.customer||'Customer',rating:5,bio:'No profile description yet.'};
   const hiredOffer=(j.offers||[]).find(o=>o.status==='accepted');
-  document.getElementById('jobModalTitle').textContent=j.title;document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
-  let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> ${esc(j.status)}<br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
+  const status=visibleJobStatus(j);
+  document.getElementById('jobModalTitle').textContent=j.title;
+  document.getElementById('jobModalMeta').textContent=`${j.category} · ${j.location} · ${j.date}`;
+  let body=`<p>${esc(j.description)}</p><div class="notice"><strong>Starting price:</strong> ${money(j.price)} · <strong>Status:</strong> <span class="badge ${status.cls}">${esc(status.label)}</span><br><strong>When:</strong> ${esc(j.date)} · <strong>Where:</strong> ${esc(j.location)}</div>`;
   if(j.customerId!==u.id)body+=`<div style="margin-top:14px"><h3>About the customer</h3>${profileCard(customer,'Customer')}</div>`;
   const canCancel=(j.status==='open'||j.status==='hired')&&(j.customerId===u.id||(hiredOffer&&hiredOffer.workerId===u.id));
-  const isJobParticipant=j.customerId===u.id||(hiredOffer&&hiredOffer.workerId===u.id);
-  if(isJobParticipant)body+=jobPhotosHtml(j.id,true);
   if(canCancel)body+=`<div style="margin-top:12px">${j.status==='hired'?'<div class="notice" style="margin-bottom:8px">Cancelling after being hired may affect your rating and could involve a cancellation fee.</div>':''}<button class="btn ghost small danger" onclick="cancelJob('${j.id}')">Cancel this job</button></div>`;
   if(j.status==='open'&&j.customerId!==u.id){
     const mine=j.offers.find(o=>o.workerId===u.id);
     body+=mine?`<div class="notice" style="margin-top:12px">You already offered ${money(mine.price)}. Status: ${esc(mine.status)}.</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${mine.status==='pending'?`<button class="btn ghost small danger" onclick="withdrawOffer('${j.id}','${mine.id}')">Withdraw offer</button>`:''}<button class="btn ghost small" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button></div>`:`<form class="form" style="margin-top:16px" onsubmit="makeOffer(event,'${j.id}')"><div class="field"><label>Your offer</label><input id="offerPrice" type="number" min="1" required value="${j.price}"></div><div class="field"><label>Message about your skills / plan</label><textarea id="offerNote" style="min-height:80px" required placeholder="Explain why you're a good fit, your experience, tools, availability, or anything relevant."></textarea></div><div class="notice">You will review the customer, job details, and your offer before it is sent.</div><button class="btn primary" type="submit">Review & send offer</button></form>`;
   }
   if((j.status==='hired'||j.status==='completed')&&hiredOffer){
-    const progressPill=j.status==='hired'?`<div style="margin-top:10px"><span class="badge ${j.progress}">${esc(progressLabel(j.progress))}</span><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-      <button class="btn ghost small${j.progress==='waiting'?' active':''}" onclick="setProgress('${j.id}','waiting')">Waiting</button>
-      <button class="btn ghost small${j.progress==='in_progress'?' active':''}" onclick="setProgress('${j.id}','in_progress')">In progress</button>
-      <button class="btn ghost small${j.progress==='incomplete'?' active':''}" onclick="setProgress('${j.id}','incomplete')">Flag incomplete</button>
-    </div></div>`:'';
+    const progressPill=`<div style="margin-top:10px"><span class="badge ${progressClass(j.progress)}">${esc(progressLabel(j.progress))}</span></div>`;
     if(j.customerId===u.id){
       const worker=getUser(hiredOffer.workerId)||{name:hiredOffer.worker,rating:5,bio:''};
-      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}${progressPill}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      const controls=j.status==='hired'?`<div class="notice" style="margin-top:10px">You control the work-progress status. The worker cannot change it.</div><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn ghost small${j.progress==='waiting'?' active':''}" onclick="setProgress('${j.id}','waiting')">Waiting</button>
+        <button class="btn ghost small${j.progress==='in_progress'?' active':''}" onclick="setProgress('${j.id}','in_progress')">In Progress</button>
+        <button class="btn ghost small${j.progress==='incomplete'?' active':''}" onclick="setProgress('${j.id}','incomplete')">Flag Incomplete</button>
+      </div>`:'';
+      body+=`<div style="margin-top:16px"><h3>Hired</h3>${profileCard(worker,'Hired worker')}${progressPill}${controls}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         <button class="btn ghost small" onclick="openChat('${j.id}','${hiredOffer.workerId}')">💬 Message ${esc(worker.name||'worker')}</button>
         ${j.status==='hired'?`<button class="btn primary small" onclick="markComplete('${j.id}')">Mark job complete</button>`:''}
       </div></div>`;
     }else if(hiredOffer.workerId===u.id){
-      body+=`<div class="notice" style="margin-top:12px">You're hired for this job at ${money(hiredOffer.price)}.</div>${progressPill}<button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`;
+      body+=`<div class="notice" style="margin-top:12px">You're hired for this job at ${money(hiredOffer.price)}.</div>${progressPill}<div class="notice" style="margin-top:8px">The customer controls the job-progress status.</div><button class="btn ghost small" style="margin-top:10px" onclick="openChat('${j.id}','${u.id}')">💬 Message the customer</button>`;
     }else{
       body+=`<div class="notice" style="margin-top:12px">This job has been filled.</div>`;
     }
   }
   if(j.status==='completed')body+=`<div id="reviewSection" style="margin-top:16px"><h3>Reviews</h3><div class="muted">Loading…</div></div>`;
-  if(j.customerId===u.id)body+=`<div style="margin-top:16px"><h3>Offers received · compare ratings & skills</h3>${offerList(j)}</div>`;
+  if(j.customerId===u.id&&j.status!=='completed'&&j.status!=='cancelled')body+=`<div style="margin-top:16px"><h3>Offers received · compare ratings & skills</h3>${offerList(j)}</div>`;
   document.getElementById('jobModalBody').innerHTML=body;document.getElementById('jobModal').classList.remove('hidden');
-  if(isJobParticipant)loadJobPhotosUI(j.id);
   if(j.status==='completed')loadReviewSection(j,u,hiredOffer);
 }
-function closeJobModal(){document.getElementById('jobModal').classList.add('hidden');unsubscribeChat();currentChat=null}
 
-/* ---------- Job photos ---------- */
-async function uploadJobPhoto(jobId,file){
-  const u=current();if(!u||!file)return;
-  if(!file.type.startsWith('image/')){toast('Please choose an image file.','error');return}
-  if(file.size>8*1024*1024){toast('Image must be 8 MB or smaller.','error');return}
-  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-  const path=`${u.id}/${jobId}/${crypto.randomUUID()}.${ext}`;
-  const {error}=await supabaseClient.storage.from('job-photos').upload(path,file,{upsert:false,contentType:file.type});
-  if(error){toast(error.message||'Could not upload photo.','error');return}
-  const {error:rowError}=await supabaseClient.from('job_photos').insert({job_id:jobId,uploaded_by:u.id,storage_path:path});
-  if(rowError){await supabaseClient.storage.from('job-photos').remove([path]);toast(rowError.message||'Could not save photo.','error');return}
-  toast('Photo uploaded.','success');
-  await loadJobPhotosUI(jobId);
-}
-async function listJobPhotos(jobId){
-  const {data,error}=await supabaseClient.from('job_photos').select('id,uploaded_by,storage_path,created_at').eq('job_id',jobId).order('created_at',{ascending:false});
-  if(error)return [];
-  return data||[];
-}
-async function loadJobPhotosUI(jobId){
-  const box=document.getElementById('jobPhotosBox');if(!box)return;
-  const photos=await listJobPhotos(jobId);
-  if(!document.getElementById('jobPhotosBox'))return;
-  if(!photos.length){box.querySelector('.job-photo-grid')?.replaceChildren();return;}
-  const grid=box.querySelector('.job-photo-grid');if(!grid)return;
-  grid.innerHTML='<div class="muted">Loading photos…</div>';
-  const cards=[];
-  for(const p of photos){
-    const {data,error}=await supabaseClient.storage.from('job-photos').createSignedUrl(p.storage_path,3600);
-    if(error||!data?.signedUrl)continue;
-    cards.push(`<a href="${esc(data.signedUrl)}" target="_blank" rel="noopener"><img src="${esc(data.signedUrl)}" alt="Job photo" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line)"></a>`);
-  }
-  grid.innerHTML=cards.length?cards.join(''):'<div class="muted">No photos available.</div>';
-}
-function jobPhotosHtml(jobId,canUpload){
-  return `<div id="jobPhotosBox" style="margin-top:16px"><h3>Job photos</h3>
-    ${canUpload?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><input id="jobPhotoInput" type="file" accept="image/*" style="max-width:100%" onchange="handleJobPhotoInput(event,'${jobId}')"><span class="muted">Images up to 8 MB</span></div>`:''}
-    <div class="job-photo-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px"><div class="muted">Loading photos…</div></div>
-  </div>`;
-}
-async function handleJobPhotoInput(e,jobId){
-  const file=e.target.files?.[0];if(!file)return;
-  const input=e.target;input.disabled=true;
-  try{await uploadJobPhoto(jobId,file)}finally{input.value='';input.disabled=false}
-}
+function closeJobModal(){document.getElementById('jobModal').classList.add('hidden');unsubscribeChat();currentChat=null}
 
 /* ---------- Messaging ---------- */
 let currentChat=null, chatSub=null;
@@ -735,11 +742,12 @@ function unsubscribeChat(){
 
 /* ---------- Completion & reviews ---------- */
 async function markComplete(jobId){
-  const j=state.jobs.find(x=>x.id===jobId);if(!j)return;
-  showConfirm('Mark this job as complete?','<div class="notice">Only confirm once the work is actually finished. This lets both of you leave a review.</div>',async()=>{
+  const j=state.jobs.find(x=>x.id===jobId),u=current();
+  if(!j||!u||j.customerId!==u.id)return;
+  showConfirm('Mark this job as complete?','<div class="notice">Only confirm once the work is actually finished. This moves the job into History and lets both sides leave a review.</div>',async()=>{
     const {error}=await supabaseClient.rpc('complete_job',{p_job_id:jobId});
     if(error){toast(error.message||'Could not complete the job.','error');return}
-    await loadData();closeJobModal();toast('Job marked complete — you can leave a review now!','success');switchView('dashboard');
+    await loadData();closeJobModal();toast('Job completed and moved to History.','success');switchView('dashboard');
   },'Mark complete');
 }
 async function loadReviewSection(j,u,hiredOffer){
@@ -755,7 +763,7 @@ async function loadReviewSection(j,u,hiredOffer){
   const theirReview=otherId?reviews.find(r=>r.reviewer_id===otherId):null;
   let html='<h3>Reviews</h3>';
   if(theirReview){
-    html+=`<div class="profile-card" style="margin-bottom:10px"><strong>${esc(otherName)} said:</strong><div class="rating">${'★'.repeat(theirReview.rating)}${'☆'.repeat(5-theirReview.rating)}</div><p>${esc(theirReview.review||theirReview.comment||'No comment left.')}</p></div>`;
+    html+=`<div class="profile-card" style="margin-bottom:10px"><strong>${esc(otherName)} said:</strong><div class="rating">${'★'.repeat(theirReview.rating)}${'☆'.repeat(5-theirReview.rating)}</div><p>${esc(theirReview.review||'No comment left.')}</p></div>`;
   }
   if(myReview){
     html+=`<div class="notice">You rated ${esc(otherName)} ${myReview.rating}★. Thanks for the feedback!</div>`;
@@ -782,12 +790,12 @@ async function loadReviewSection(j,u,hiredOffer){
 async function submitReview(e,jobId,revieweeId){
   e.preventDefault();
   const rating=Number(document.getElementById('reviewRating').value);
-  const comment=cleanText(document.getElementById('reviewComment').value);
+  const comment=cleanText(document.getElementById('reviewComment').value)||'No comment left.';
   if(!rating){toast('Please choose a rating.');return}
   const btn=e.target.querySelector('button[type=submit]');
   busy(btn,'Submitting…');
   const {error}=await supabaseClient.rpc('submit_job_review',{
-    p_job_id:jobId,p_reviewed_id:revieweeId,p_rating:rating,p_review:comment||'No comment left.'
+    p_job_id:jobId,p_reviewed_id:revieweeId,p_rating:rating,p_review:comment
   });
   if(error){unbusy(btn);toast(error.message,'error');return}
   await loadData();toast('Review submitted!','success');
@@ -856,16 +864,26 @@ function cancelJob(jobId){
     await loadData();closeJobModal();toast('Job cancelled','success');switchView('dashboard');
   },'Cancel job');
 }
-function progressLabel(p){
-  return p==='in_progress'?'In progress':p==='incomplete'?'Flagged incomplete':'Waiting to start';
-}
 async function setProgress(jobId,val){
-  const u=current();if(!u)return;
-  const {data,error}=await supabaseClient.from('jobs').update({progress_status:val,progress_updated_by:u.id}).eq('id',jobId).select();
+  const u=current(),j=state.jobs.find(x=>x.id===jobId);
+  if(!u||!j||j.customerId!==u.id){toast('Only the customer can change the work-progress status.','error');return}
+  if(j.status!=='hired'){toast('Progress can only be changed after a worker is hired.','error');return}
+  if(!['waiting','in_progress','incomplete'].includes(val)){toast('Invalid progress status.','error');return}
+  const {data,error}=await supabaseClient.from('jobs').update({progress_status:val,progress_updated_by:u.id}).eq('id',jobId).eq('customer_id',u.id).select();
   if(error){toast(error.message,'error');return}
   if(!checkWrite(data,'the status'))return;
-  await loadData();openJob(jobId);toast('Status updated','success');
+  await loadData();openJob(jobId);toast('Progress status updated','success');
 }
+
+async function removeFromHistory(jobId){
+  const j=state.jobs.find(x=>x.id===jobId);if(!j)return;
+  showConfirm('Remove from your history?','<div class="notice">This removes the job from <strong>your</strong> History only. It does not erase the other participant’s history, reviews, or messages.</div>',async()=>{
+    const {error}=await supabaseClient.rpc('remove_job_from_my_history',{p_job_id:jobId});
+    if(error){toast(error.message||'Could not remove this job from history.','error');return}
+    await loadData();toast('Removed from your history.','success');switchView('history');
+  },'Remove from history');
+}
+
 
 async function initMoche(){
   const {data:{session}}=await supabaseClient.auth.getSession();
@@ -882,7 +900,7 @@ supabaseClient.auth.onAuthStateChange((event,session)=>{
     setTimeout(async()=>{try{await finishAuth(session.user)}catch(err){console.error(err)}},0);
   }
   if(event==='SIGNED_OUT'){
-    state={jobs:[],users:[],session:null};
+    state={jobs:[],users:[],session:null,archivedJobIds:new Set()};
     showLanding();
   }
 });
